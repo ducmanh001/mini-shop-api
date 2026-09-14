@@ -3,14 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { I18nService } from 'nestjs-i18n';
 import { escapeHtml } from '../../../common/utils/escape-html.util';
 import { decryptNotificationSecret } from '../../../common/utils/notification-secret-cipher.util';
+import { NOTIFICATION_SECRET_KEY_PROVIDER } from '../../../notification-secret/notification-secret.constants';
+import { AuthTokenMailPayload } from '../../auth/interfaces/auth-token-mail-payload.interface';
 import {
   AUTH_TOKEN_LINK_PATH,
-  NOTIFICATION_SECRET_KEY_PROVIDER,
   ORDER_MAIL_KEY,
 } from '../constants/notifications.constants';
 import { EmailNotificationEventType } from '../enums/email-notification-event-type.enum';
 import { EmailNotification } from '../entities/email-notification.entity';
-import { AuthTokenMailPayload } from '../interfaces/auth-token-mail-payload.interface';
 import { MailContent } from '../interfaces/mail-content.interface';
 
 /** Tách khỏi `MailerService` để test được logic dựng nội dung mà không cần mock SMTP transport. */

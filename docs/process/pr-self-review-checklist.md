@@ -44,6 +44,7 @@ Nguồn: [nestjs-mock-project#7](https://github.com/thaind-2785/nestjs-mock-proj
 - [ ] 🔴 Interface dùng ở service/controller tách file riêng `interfaces/*.interface.ts` — không có ngoại lệ dù có lý do tránh import cycle (mục 4, nguồn: #22).
 - [ ] 🔴 Enum mới tách file riêng `enums/*.enum.ts`, không khai trong entity — áp dụng cho mọi enum, không chỉ enum cross-module.
 - [ ] 🔴 Magic number/regex/path gom vào `constants/` của module sở hữu.
+- [ ] Type/constant có sẵn của framework/library đã dùng trước khi tự định nghĩa mới (vd: enum `HttpStatus` của `@nestjs/common` thay vì hardcode `@HttpCode(200)`/`status: 400`) (mục 15).
 - [ ] 🔴 Không hàm quá dài / if-else lồng quá 3 cấp; logic lặp lại rút hàm chung.
 - [ ] 🔴 Controller không chứa business logic, chỉ gọi service (mục 3).
 - [ ] 🔴 Access modifier nhất quán — method nội bộ `private`; DI constructor luôn `private readonly`, không bare `readonly` (nguồn: #11).

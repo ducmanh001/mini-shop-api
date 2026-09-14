@@ -8,7 +8,6 @@ import { OrdersModule } from '../orders/orders.module';
 import {
   MAIL_QUEUE_NAME,
   MAIL_TRANSPORTER_PROVIDER,
-  NOTIFICATION_SECRET_KEY_PROVIDER,
 } from './constants/notifications.constants';
 import { EmailNotification } from './entities/email-notification.entity';
 import { MailProcessor } from './processors/mail.processor';
@@ -36,15 +35,6 @@ import { NotificationsService } from './services/notifications.service';
     BullModule.registerQueue({ name: MAIL_QUEUE_NAME }),
   ],
   providers: [
-    {
-      provide: NOTIFICATION_SECRET_KEY_PROVIDER,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): Buffer =>
-        Buffer.from(
-          config.getOrThrow<string>('NOTIFICATION_SECRET_KEY'),
-          'base64',
-        ),
-    },
     {
       provide: MAIL_TRANSPORTER_PROVIDER,
       inject: [ConfigService],

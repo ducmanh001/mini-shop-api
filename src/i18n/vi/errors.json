@@ -1,3 +1,11 @@
 {
-  "internal": "Đã xảy ra lỗi hệ thống"
+  "internal": "Đã xảy ra lỗi hệ thống",
+  "emailAlreadyRegistered": "Email này đã được đăng ký",
+  "usernameAlreadyTaken": "Username này đã được sử dụng",
+  "usernameOrEmailAlreadyRegistered": "Email hoặc username này đã được đăng ký",
+  "invalidCredentials": "Email hoặc mật khẩu không đúng",
+  "accountNotVerified": "Vui lòng xác thực email trước khi đăng nhập",
+  "accountDeactivated": "Tài khoản này đã bị vô hiệu hóa",
+  "invalidOrExpiredToken": "Token không hợp lệ, đã hết hạn hoặc đã được sử dụng",
+  "tokenRevoked": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"
 }

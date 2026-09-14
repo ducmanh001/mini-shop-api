@@ -7,5 +7,6 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "setupFiles": ["<rootDir>/test/utils/setup-env.ts"]
+  "setupFiles": ["<rootDir>/test/utils/setup-env.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/test/utils/reset-database.setup.ts"]
 }

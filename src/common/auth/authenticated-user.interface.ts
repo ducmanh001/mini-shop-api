@@ -1,7 +1,10 @@
+import { UserRole } from '../enums/user-role.enum';
+import type { UserStatus } from '../../modules/users/enums/user-status.enum';
+
 export interface AuthenticatedUser {
   id: string;
-  role: 'CUSTOMER' | 'ADMIN';
-  status: 'ACTIVE';
+  role: UserRole;
+  status: UserStatus.ACTIVE;
   tokenId: string;
   tokenVersion: number;
 }

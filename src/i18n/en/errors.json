@@ -1,3 +1,11 @@
 {
-  "internal": "Internal server error"
+  "internal": "Internal server error",
+  "emailAlreadyRegistered": "This email is already registered",
+  "usernameAlreadyTaken": "This username is already taken",
+  "usernameOrEmailAlreadyRegistered": "This email or username is already registered",
+  "invalidCredentials": "Invalid email or password",
+  "accountNotVerified": "Please verify your email before logging in",
+  "accountDeactivated": "This account has been deactivated",
+  "invalidOrExpiredToken": "This token is invalid, expired, or already used",
+  "tokenRevoked": "Your session has expired, please log in again"
 }
