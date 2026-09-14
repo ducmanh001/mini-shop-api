@@ -1,13 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNormalizedEmail } from '../../users/decorators/is-normalized-email.decorator';
-import { IsPassword } from '../../users/decorators/is-password.decorator';
 
-export class LoginDto {
+export class ForgotPasswordDto {
   @ApiProperty()
   @IsNormalizedEmail()
   email: string;
-
-  @ApiProperty()
-  @IsPassword()
-  password: string;
 }

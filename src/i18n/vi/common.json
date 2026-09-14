@@ -1,3 +1,4 @@
 {
-  "ready": "Mini Shop API đã sẵn sàng"
+  "ready": "Mini Shop API đã sẵn sàng",
+  "passwordResetRequested": "Nếu tài khoản hợp lệ, hướng dẫn sẽ được gửi qua email."
 }

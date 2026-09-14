@@ -120,6 +120,7 @@
       "!**/*.constants.ts",
       "!**/*.entity.ts",
       "!**/*.enum.ts",
+      "!**/*.controller.ts",
       "!database/migrations/**",
       "!database/seeds/seed.ts"
     ],

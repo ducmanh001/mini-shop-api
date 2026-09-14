@@ -7,5 +7,8 @@
   "accountNotVerified": "Please verify your email before logging in",
   "accountDeactivated": "This account has been deactivated",
   "invalidOrExpiredToken": "This token is invalid, expired, or already used",
-  "tokenRevoked": "Your session has expired, please log in again"
+  "tokenRevoked": "Your session has expired, please log in again",
+  "currentPasswordIncorrect": "Current password is incorrect",
+  "atLeastOneFieldRequired": "At least one field must be provided",
+  "userNotFound": "User not found"
 }

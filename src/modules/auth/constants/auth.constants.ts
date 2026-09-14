@@ -1,12 +1,11 @@
-export const MIN_PASSWORD_LENGTH = 8;
-/** bcrypt chỉ dùng 72 byte đầu — validate cận trước khi hash (database.md, `RegisterRequest`). */
-export const MAX_PASSWORD_BYTES = 72;
-
-export const EMAIL_VERIFICATION_TOKEN_BYTES = 32;
+/** Độ dài raw token (bytes) dùng chung cho mọi `AuthTokenType` — hex hoá thành 64 ký tự. */
+export const AUTH_TOKEN_BYTES = 32;
 export const EMAIL_VERIFICATION_TOKEN_TTL_SECONDS = 24 * 60 * 60;
+export const PASSWORD_RESET_TOKEN_TTL_SECONDS = 60 * 60;
 
-export const VERIFY_EMAIL_TOKEN_MIN_LENGTH = 32;
-export const VERIFY_EMAIL_TOKEN_MAX_LENGTH = 512;
+/** Cận độ dài raw token nhận từ client — dùng chung cho `VerifyEmailRequest`/`ResetPasswordRequest`. */
+export const AUTH_TOKEN_MIN_LENGTH = 32;
+export const AUTH_TOKEN_MAX_LENGTH = 512;
 
 /**
  * Hash bcrypt cố định của một chuỗi không phải password thật — dùng làm vế so sánh khi email

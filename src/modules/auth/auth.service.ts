@@ -23,14 +23,18 @@ import { User } from '../users/entities/user.entity';
 import { UserStatus } from '../users/enums/user-status.enum';
 import { UsersService } from '../users/users.service';
 import {
+  AUTH_TOKEN_BYTES,
   DUMMY_PASSWORD_HASH,
-  EMAIL_VERIFICATION_TOKEN_BYTES,
   EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
+  PASSWORD_RESET_TOKEN_TTL_SECONDS,
 } from './constants/auth.constants';
 import { AuthToken } from './entities/auth-token.entity';
 import { AuthTokenType } from './enums/auth-token-type.enum';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { MessageResponseDto } from './dto/message-response.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { CreateAuthTokenResult } from './interfaces/create-auth-token-result.interface';
 import { AuthTokenMailPayload } from './interfaces/auth-token-mail-payload.interface';
@@ -65,10 +69,11 @@ export class AuthService {
         EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
         manager,
       );
-      await this.createEmailVerificationNotification(
+      await this.createAuthTokenNotification(
         createdUser,
         rawToken,
         authToken.id,
+        EmailNotificationEventType.EMAIL_VERIFICATION,
         manager,
       );
       return createdUser;
@@ -78,37 +83,12 @@ export class AuthService {
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<void> {
-    const tokenHash = this.hashToken(dto.token);
     await this.dataSource.transaction(async (manager) => {
-      const authTokenRepository = manager.getRepository(AuthToken);
-      const authToken = await authTokenRepository.findOne({
-        select: { id: true, userId: true },
-        where: { tokenHash, type: AuthTokenType.EMAIL_VERIFICATION },
-      });
-      if (!authToken) {
-        this.logger.warn('Email verification attempted with an unknown token');
-        throw new BadRequestException(
-          this.i18n.t('errors.invalidOrExpiredToken'),
-        );
-      }
-
-      const consumeResult = await authTokenRepository
-        .createQueryBuilder()
-        .update(AuthToken)
-        .set({ usedAt: () => 'now()' })
-        .where('id = :id', { id: authToken.id })
-        .andWhere('used_at IS NULL')
-        .andWhere('expires_at > now()')
-        .execute();
-      if ((consumeResult.affected ?? 0) === 0) {
-        this.logger.warn(
-          `Email verification token ${authToken.id} already used or expired`,
-        );
-        throw new BadRequestException(
-          this.i18n.t('errors.invalidOrExpiredToken'),
-        );
-      }
-
+      const authToken = await this.consumeAuthToken(
+        dto.token,
+        AuthTokenType.EMAIL_VERIFICATION,
+        manager,
+      );
       const activated = await this.usersService.markEmailVerified(
         authToken.userId,
         manager,
@@ -120,6 +100,63 @@ export class AuthService {
         throw new ConflictException(this.i18n.t('errors.accountDeactivated'));
       }
       this.logger.log(`User ${authToken.userId} verified their email`);
+    });
+  }
+
+  /**
+   * Luôn trả về cùng 1 message dù email tồn tại hay không (chống account enumeration,
+   * api-contract.md `ForgotPasswordRequest`) — chỉ user ACTIVE mới thực sự nhận token mới.
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<MessageResponseDto> {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (user && user.status === UserStatus.ACTIVE) {
+      await this.dataSource.transaction(async (manager) => {
+        await this.revokeUnusedAuthTokens(
+          user.id,
+          AuthTokenType.PASSWORD_RESET,
+          manager,
+        );
+        const { authToken, rawToken } = await this.createAuthToken(
+          user.id,
+          AuthTokenType.PASSWORD_RESET,
+          PASSWORD_RESET_TOKEN_TTL_SECONDS,
+          manager,
+        );
+        await this.createAuthTokenNotification(
+          user,
+          rawToken,
+          authToken.id,
+          EmailNotificationEventType.PASSWORD_RESET,
+          manager,
+        );
+      });
+      this.logger.log(`Password reset requested for user ${user.id}`);
+    } else {
+      this.logger.warn(
+        'Password reset requested for an unknown or inactive email',
+      );
+    }
+    return MessageResponseDto.create(
+      this.i18n.t('common.passwordResetRequested'),
+    );
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    await this.dataSource.transaction(async (manager) => {
+      const authToken = await this.consumeAuthToken(
+        dto.token,
+        AuthTokenType.PASSWORD_RESET,
+        manager,
+      );
+      await this.usersService.updatePassword(
+        authToken.userId,
+        passwordHash,
+        manager,
+      );
+      this.logger.log(
+        `User ${authToken.userId} reset their password, all previous access tokens revoked`,
+      );
     });
   }
 
@@ -174,9 +211,7 @@ export class AuthService {
     ttlSeconds: number,
     manager: EntityManager,
   ): Promise<CreateAuthTokenResult> {
-    const rawToken = randomBytes(EMAIL_VERIFICATION_TOKEN_BYTES).toString(
-      'hex',
-    );
+    const rawToken = randomBytes(AUTH_TOKEN_BYTES).toString('hex');
     const authTokenRepository = manager.getRepository(AuthToken);
     const authToken = authTokenRepository.create({
       userId,
@@ -188,10 +223,68 @@ export class AuthService {
     return { authToken, rawToken };
   }
 
-  private async createEmailVerificationNotification(
+  /**
+   * Tìm token theo hash+type rồi atomic UPDATE đánh dấu đã dùng, chỉ khi còn hạn và chưa dùng
+   * (mục 22 CODING_STANDARD.md) — dùng chung cho `verifyEmail`/`resetPassword`, khác nhau đúng 1
+   * chỗ: `AuthTokenType` và hành động tiếp theo trên user.
+   */
+  private async consumeAuthToken(
+    rawToken: string,
+    type: AuthTokenType,
+    manager: EntityManager,
+  ): Promise<AuthToken> {
+    const tokenHash = this.hashToken(rawToken);
+    const authTokenRepository = manager.getRepository(AuthToken);
+    const authToken = await authTokenRepository.findOne({
+      select: { id: true, userId: true },
+      where: { tokenHash, type },
+    });
+    if (!authToken) {
+      this.logger.warn(`${type} attempted with an unknown token`);
+      throw new BadRequestException(
+        this.i18n.t('errors.invalidOrExpiredToken'),
+      );
+    }
+
+    const consumeResult = await authTokenRepository
+      .createQueryBuilder()
+      .update(AuthToken)
+      .set({ usedAt: () => 'now()' })
+      .where('id = :id', { id: authToken.id })
+      .andWhere('used_at IS NULL')
+      .andWhere('expires_at > now()')
+      .execute();
+    if ((consumeResult.affected ?? 0) === 0) {
+      this.logger.warn(`${type} token ${authToken.id} already used or expired`);
+      throw new BadRequestException(
+        this.i18n.t('errors.invalidOrExpiredToken'),
+      );
+    }
+    return authToken;
+  }
+
+  /** Revoke mọi token cùng loại chưa dùng của user — dùng khi forgot-password phát token mới. */
+  private async revokeUnusedAuthTokens(
+    userId: string,
+    type: AuthTokenType,
+    manager: EntityManager,
+  ): Promise<void> {
+    await manager
+      .getRepository(AuthToken)
+      .createQueryBuilder()
+      .update(AuthToken)
+      .set({ usedAt: () => 'now()' })
+      .where('user_id = :userId', { userId })
+      .andWhere('type = :type', { type })
+      .andWhere('used_at IS NULL')
+      .execute();
+  }
+
+  private async createAuthTokenNotification(
     user: User,
     rawToken: string,
     authTokenId: string,
+    eventType: EmailNotificationEventType,
     manager: EntityManager,
   ): Promise<void> {
     const payload: AuthTokenMailPayload = {
@@ -201,7 +294,7 @@ export class AuthService {
     const notificationRepository = manager.getRepository(EmailNotification);
     const notification = notificationRepository.create({
       authTokenId,
-      eventType: EmailNotificationEventType.EMAIL_VERIFICATION,
+      eventType,
       recipientEmail: user.email,
       locale: this.resolveLocale(),
       payload: payload as unknown as Record<string, unknown>,

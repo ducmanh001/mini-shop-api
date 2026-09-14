@@ -2,6 +2,15 @@
 export const SALT_ROUNDS = 10;
 
 /**
+ * Rule password dùng chung cho đăng ký/reset (`auth`) và đổi mật khẩu (`users`, PR07) — chuyển
+ * từ `auth/constants/auth.constants.ts` sang đây vì `ChangePasswordDto` (`users`) cũng cần, và
+ * `users` không được import từ `auth` (CODING_STANDARD.md mục 10 — cùng lý do với `UserRole`).
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+/** bcrypt chỉ dùng 72 byte đầu — validate cận trước khi hash (database.md, `RegisterRequest`). */
+export const MAX_PASSWORD_BYTES = 72;
+
+/**
  * Rule username dùng chung cho đăng ký (`auth`) và sửa hồ sơ (`users`, PR07) — database.md mục 4:
  * "users" (3..30 ký tự [a-z0-9_], lowercase). `auth` import từ đây thay vì tự định nghĩa lại
  * (CODING_STANDARD.md mục 15, cùng lý do với `SALT_ROUNDS`).
