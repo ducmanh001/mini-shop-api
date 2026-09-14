@@ -1,3 +1,4 @@
 {
-  "ready": "Mini Shop API is ready"
+  "ready": "Mini Shop API is ready",
+  "passwordResetRequested": "If this account exists, password reset instructions have been sent to the email."
 }

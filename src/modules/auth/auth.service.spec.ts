@@ -31,6 +31,7 @@ describe('AuthService', () => {
     create: jest.Mock;
     findByEmail: jest.Mock;
     markEmailVerified: jest.Mock;
+    updatePassword: jest.Mock;
     toResponseDto: jest.Mock;
   };
   let jwtService: { sign: jest.Mock };
@@ -59,6 +60,7 @@ describe('AuthService', () => {
       create: jest.fn(),
       findByEmail: jest.fn(),
       markEmailVerified: jest.fn(),
+      updatePassword: jest.fn(),
       toResponseDto: jest.fn((user: object, token?: string) => ({
         user: { ...user, token },
       })),
@@ -114,6 +116,18 @@ describe('AuthService', () => {
     );
   });
 
+  function mockQueryBuilder(affected: number) {
+    const builder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue({ affected }),
+    };
+    authTokenRepository.createQueryBuilder.mockReturnValue(builder);
+    return builder;
+  }
+
   describe('register', () => {
     it('creates the user, an EMAIL_VERIFICATION token and its notification inside one transaction', async () => {
       const createdUser = {
@@ -164,18 +178,6 @@ describe('AuthService', () => {
   });
 
   describe('verifyEmail', () => {
-    function mockQueryBuilder(affected: number) {
-      const builder = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue({ affected }),
-      };
-      authTokenRepository.createQueryBuilder.mockReturnValue(builder);
-      return builder;
-    }
-
     it('throws when no token matches the hash', async () => {
       authTokenRepository.findOne.mockResolvedValue(null);
 
@@ -222,6 +224,113 @@ describe('AuthService', () => {
       ).resolves.toBeUndefined();
       expect(usersService.markEmailVerified).toHaveBeenCalledWith(
         'user-1',
+        manager,
+      );
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('returns the generic message without touching the DB for an unknown email', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      const result = await service.forgotPassword({
+        email: 'nobody@example.test',
+      });
+
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+      expect(result.message).toBe('common.passwordResetRequested');
+    });
+
+    it('returns the generic message without touching the DB for a non-ACTIVE account', async () => {
+      usersService.findByEmail.mockResolvedValue({
+        id: 'user-1',
+        email: 'a@example.test',
+        username: 'alice',
+        status: UserStatus.PENDING,
+      });
+
+      const result = await service.forgotPassword({ email: 'a@example.test' });
+
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+      expect(result.message).toBe('common.passwordResetRequested');
+    });
+
+    it('revokes unused reset tokens and issues a new one for an ACTIVE account', async () => {
+      usersService.findByEmail.mockResolvedValue({
+        id: 'user-1',
+        email: 'a@example.test',
+        username: 'alice',
+        status: UserStatus.ACTIVE,
+      });
+      const revokeBuilder = mockQueryBuilder(1);
+
+      const result = await service.forgotPassword({ email: 'a@example.test' });
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(revokeBuilder.andWhere).toHaveBeenCalledWith('used_at IS NULL');
+
+      expect(authTokenRepository.save).toHaveBeenCalledTimes(1);
+      const insertedToken = authTokenRepository.save.mock.calls[0][0];
+      expect(insertedToken.userId).toBe('user-1');
+      expect(insertedToken.type).toBe(AuthTokenType.PASSWORD_RESET);
+
+      expect(notificationRepository.save).toHaveBeenCalledTimes(1);
+      const insertedNotification = notificationRepository.save.mock.calls[0][0];
+      expect(insertedNotification.eventType).toBe(
+        EmailNotificationEventType.PASSWORD_RESET,
+      );
+      expect(insertedNotification.recipientEmail).toBe('a@example.test');
+      expect(result.message).toBe('common.passwordResetRequested');
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('throws when no token matches the hash', async () => {
+      authTokenRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({
+          token: 'a'.repeat(64),
+          newPassword: 'NewDemoPass456!',
+          confirmPassword: 'NewDemoPass456!',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('throws when the token was already used or expired (0 affected rows)', async () => {
+      authTokenRepository.findOne.mockResolvedValue({
+        id: 'auth-token-1',
+        userId: 'user-1',
+      });
+      mockQueryBuilder(0);
+
+      await expect(
+        service.resetPassword({
+          token: 'a'.repeat(64),
+          newPassword: 'NewDemoPass456!',
+          confirmPassword: 'NewDemoPass456!',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('hashes the new password and revokes all previous access tokens when the token is valid', async () => {
+      authTokenRepository.findOne.mockResolvedValue({
+        id: 'auth-token-1',
+        userId: 'user-1',
+      });
+      mockQueryBuilder(1);
+
+      await service.resetPassword({
+        token: 'a'.repeat(64),
+        newPassword: 'NewDemoPass456!',
+        confirmPassword: 'NewDemoPass456!',
+      });
+
+      expect(usersService.updatePassword).toHaveBeenCalledWith(
+        'user-1',
+        'hashed-password',
         manager,
       );
     });

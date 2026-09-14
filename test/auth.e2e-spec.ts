@@ -7,6 +7,8 @@ import type { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 import { decryptNotificationSecret } from '../src/common/utils/notification-secret-cipher.util';
 import { AuthToken } from '../src/modules/auth/entities/auth-token.entity';
+import { AuthTokenType } from '../src/modules/auth/enums/auth-token-type.enum';
+import { MessageResponseDto } from '../src/modules/auth/dto/message-response.dto';
 import { EmailNotification } from '../src/modules/notifications/entities/email-notification.entity';
 import { UserResponseDto } from '../src/modules/users/dto/user-response.dto';
 import { User } from '../src/modules/users/entities/user.entity';
@@ -70,7 +72,7 @@ describe('Auth (e2e)', () => {
   async function extractVerificationToken(email: string): Promise<string> {
     const user = await usersRepository.findOneOrFail({ where: { email } });
     const authToken = await authTokenRepository.findOneOrFail({
-      where: { userId: user.id },
+      where: { userId: user.id, type: AuthTokenType.EMAIL_VERIFICATION },
     });
     const notification = await notificationsRepository.findOneOrFail({
       where: { authTokenId: authToken.id },
@@ -79,6 +81,31 @@ describe('Auth (e2e)', () => {
       notification.secretCiphertext as Buffer,
       notificationSecretKey,
     );
+  }
+
+  /** Luôn lấy token PASSWORD_RESET mới nhất của user — dùng sau (các) lần gọi forgot-password. */
+  async function extractPasswordResetToken(email: string): Promise<string> {
+    const user = await usersRepository.findOneOrFail({ where: { email } });
+    const authToken = await authTokenRepository.findOneOrFail({
+      where: { userId: user.id, type: AuthTokenType.PASSWORD_RESET },
+      order: { createdAt: 'DESC' },
+    });
+    const notification = await notificationsRepository.findOneOrFail({
+      where: { authTokenId: authToken.id },
+    });
+    return decryptNotificationSecret(
+      notification.secretCiphertext as Buffer,
+      notificationSecretKey,
+    );
+  }
+
+  async function loginAsSeedAlice(): Promise<string> {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: SEED_ALICE_EMAIL, password: SEED_PASSWORD })
+      .expect(200);
+    const body = response.body as UserResponseDto;
+    return body.user.token as string;
   }
 
   describe('POST /auth/register', () => {
@@ -182,6 +209,140 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  describe('POST /auth/forgot-password', () => {
+    it('returns 202 with a generic message for an existing ACTIVE account', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const body = response.body as MessageResponseDto;
+
+      expect(typeof body.message).toBe('string');
+      expect(body.message.length).toBeGreaterThan(0);
+    });
+
+    it('returns the same generic message for an unknown email (no account enumeration)', async () => {
+      const known = await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const unknown = await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: 'nobody@example.test' })
+        .expect(202);
+
+      expect((unknown.body as MessageResponseDto).message).toBe(
+        (known.body as MessageResponseDto).message,
+      );
+    });
+
+    it('issues a token that can reset the password via reset-password', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const token = await extractPasswordResetToken(SEED_ALICE_EMAIL);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send({
+          token,
+          newPassword: 'NewSeedPass456!',
+          confirmPassword: 'NewSeedPass456!',
+        })
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: SEED_ALICE_EMAIL, password: SEED_PASSWORD })
+        .expect(401);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: SEED_ALICE_EMAIL, password: 'NewSeedPass456!' })
+        .expect(200);
+    });
+
+    it('revokes the previous unused token when requested again', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const staleToken = await extractPasswordResetToken(SEED_ALICE_EMAIL);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send({
+          token: staleToken,
+          newPassword: 'NewSeedPass456!',
+          confirmPassword: 'NewSeedPass456!',
+        })
+        .expect(400);
+    });
+  });
+
+  describe('POST /auth/reset-password', () => {
+    it('rejects an unknown token with 400', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send({
+          token: 'z'.repeat(64),
+          newPassword: 'NewSeedPass456!',
+          confirmPassword: 'NewSeedPass456!',
+        })
+        .expect(400);
+    });
+
+    it('rejects reusing the same token twice', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const token = await extractPasswordResetToken(SEED_ALICE_EMAIL);
+      const resetDto = {
+        token,
+        newPassword: 'NewSeedPass456!',
+        confirmPassword: 'NewSeedPass456!',
+      };
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send(resetDto)
+        .expect(204);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send(resetDto)
+        .expect(400);
+    });
+
+    it('revokes previously issued access tokens after a successful reset', async () => {
+      const oldAccessToken = await loginAsSeedAlice();
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_ALICE_EMAIL })
+        .expect(202);
+      const token = await extractPasswordResetToken(SEED_ALICE_EMAIL);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send({
+          token,
+          newPassword: 'NewSeedPass456!',
+          confirmPassword: 'NewSeedPass456!',
+        })
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${oldAccessToken}`)
+        .expect(401);
+    });
+  });
+
   describe('POST /auth/login', () => {
     it('logs in an ACTIVE account and returns an access token', async () => {
       const response = await request(app.getHttpServer())
@@ -220,15 +381,6 @@ describe('Auth (e2e)', () => {
   });
 
   describe('POST /auth/logout', () => {
-    async function loginAsSeedAlice(): Promise<string> {
-      const response = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({ email: SEED_ALICE_EMAIL, password: SEED_PASSWORD })
-        .expect(200);
-      const body = response.body as UserResponseDto;
-      return body.user.token as string;
-    }
-
     it('revokes the current token so a second call with it is rejected', async () => {
       const token = await loginAsSeedAlice();
 

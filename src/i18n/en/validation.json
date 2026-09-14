@@ -20,5 +20,7 @@
   "MAX_LENGTH_BODY": "Body must not exceed the allowed length",
   "MIN_LIMIT": "Limit must be at least 1",
   "MAX_LIMIT": "Limit must not exceed 100",
-  "MIN_OFFSET": "Offset must not be negative"
+  "MIN_OFFSET": "Offset must not be negative",
+  "PASSWORDS_DO_NOT_MATCH": "Passwords do not match",
+  "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from the current password"
 }
