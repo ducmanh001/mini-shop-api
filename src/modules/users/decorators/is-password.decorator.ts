@@ -10,7 +10,7 @@ import { i18nValidationMessage } from 'nestjs-i18n';
 import {
   MAX_PASSWORD_BYTES,
   MIN_PASSWORD_LENGTH,
-} from '../constants/auth.constants';
+} from '../constants/users.constants';
 
 /** `@MaxLength` đếm UTF-16 code unit, không phải byte — password giới hạn theo byte (bcrypt). */
 @ValidatorConstraint({ name: 'maxPasswordBytes', async: false })

@@ -2,7 +2,7 @@ import { validate } from 'class-validator';
 import {
   MAX_PASSWORD_BYTES,
   MIN_PASSWORD_LENGTH,
-} from '../constants/auth.constants';
+} from '../constants/users.constants';
 import { IsPassword } from './is-password.decorator';
 
 class PasswordTestDto {
