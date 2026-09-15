@@ -415,46 +415,49 @@ CHECK giữ bộ ba review nhất quán: PENDING không có reviewer/reviewed_at
 
 Primary key và UNIQUE đã tạo index tương ứng; không tạo thêm index trùng. Khóa ngoại phía con không tự được PostgreSQL tạo index; cần xét query và thao tác tới bảng cha trước khi thêm. [PostgreSQL constraints](https://www.postgresql.org/docs/16/ddl-constraints.html)
 
-| Index dự kiến                                                                                          | Query hỗ trợ                         |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| UNIQUE `users(email)` và `users(username)`                                                             | Login; kiểm tra đăng ký trùng        |
-| `users(status, created_at DESC, id DESC)`                                                              | Admin lọc user theo trạng thái       |
-| `users(created_at DESC, id DESC)`                                                                      | Admin list user không filter status  |
-| `auth_tokens(user_id, type, created_at DESC)`                                                          | Vô hiệu/tìm token mới của user       |
-| UNIQUE `auth_tokens(token_hash)`                                                                       | Verify token không quét bảng         |
-| UNIQUE `cart_items(user_id, product_id)`                                                               | Đọc/sửa giỏ theo user và product     |
-| `cart_items(product_id)`                                                                               | FK lookup theo product               |
-| `categories(is_active, created_at DESC, id DESC)`                                                      | Danh sách category active phân trang |
-| `categories(created_at DESC, id DESC)`                                                                 | Admin list toàn bộ category          |
-| `products(is_active, created_at DESC, id DESC)`                                                        | Public list các sản phẩm còn bán     |
-| `products(category_id, is_active, created_at DESC, id DESC)`                                           | Public list theo danh mục            |
-| `products(created_at DESC, id DESC)`                                                                   | Admin list không filter active       |
-| UNIQUE `reviews(user_id, product_id)`                                                                  | Một user một review/product          |
-| `reviews(product_id, created_at DESC, id DESC)`                                                        | List review sản phẩm                 |
-| `orders(user_id, created_at DESC, id DESC)`                                                            | Lịch sử đơn của customer             |
-| `orders(status, created_at DESC, id DESC)`                                                             | Admin list theo trạng thái           |
-| `orders(created_at DESC, id DESC)`                                                                     | Admin list không filter trạng thái   |
-| UNIQUE `orders(user_id, idempotency_key)`                                                              | Retry checkout trả đơn cũ            |
-| UNIQUE `order_items(order_id, product_id)`                                                             | Detail đơn và ngăn dòng trùng        |
-| `order_items(product_id)`                                                                              | Truy vết dòng hàng theo product      |
-| `order_status_history(order_id, created_at, id)`                                                       | Timeline trạng thái                  |
-| `order_status_history(actor_user_id)`                                                                  | FK lookup theo actor                 |
-| UNIQUE `email_notifications(auth_token_id) WHERE NOT NULL`                                             | Một mail intent cho mỗi auth token   |
-| UNIQUE `email_notifications(order_id,event_type) WHERE order_id IS NOT NULL`                           | Một mail intent cho mỗi order event  |
-| UNIQUE `email_notifications(recipient_email,event_type,report_period) WHERE report_period IS NOT NULL` | Một monthly report/admin/kỳ          |
-| `email_notifications(status, updated_at, id)`                                                          | Scheduler chọn PENDING theo batch    |
-| UNIQUE `chat_conversations(customer_id) WHERE status='OPEN'`                                           | Một support conversation mở/customer |
-| `chat_conversations(status, last_message_at DESC, id DESC)`                                            | Admin support inbox                  |
-| `chat_conversations(assigned_admin_id, status, last_message_at DESC, id DESC)`                         | Inbox theo admin được assign         |
-| UNIQUE `chat_messages(sender_id,idempotency_key)`                                                      | Retry gửi message không tạo trùng    |
-| `chat_messages(conversation_id, created_at DESC, id DESC)`                                             | Cursor message history               |
-| `product_suggestions(customer_id, created_at DESC, id DESC)`                                           | Customer xem suggestion của mình     |
-| `product_suggestions(status, created_at DESC, id DESC)`                                                | Admin review queue                   |
-| `orders(status, completed_at, id) WHERE status='COMPLETED'`                                            | Aggregate revenue theo khoảng ngày   |
+| Index dự kiến                                                                                          | Query hỗ trợ                          |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| UNIQUE `users(email)` và `users(username)`                                                             | Login; kiểm tra đăng ký trùng         |
+| `users(status, created_at DESC, id DESC)`                                                              | Admin lọc user theo trạng thái        |
+| `users(created_at DESC, id DESC)`                                                                      | Admin list user không filter status   |
+| GIN trigram `idx_users_username_trgm`, `idx_users_email_trgm` (`pg_trgm`)                              | `ILIKE '%keyword%'` ở admin list user |
+| `auth_tokens(user_id, type, created_at DESC)`                                                          | Vô hiệu/tìm token mới của user        |
+| UNIQUE `auth_tokens(token_hash)`                                                                       | Verify token không quét bảng          |
+| UNIQUE `cart_items(user_id, product_id)`                                                               | Đọc/sửa giỏ theo user và product      |
+| `cart_items(product_id)`                                                                               | FK lookup theo product                |
+| `categories(is_active, created_at DESC, id DESC)`                                                      | Danh sách category active phân trang  |
+| `categories(created_at DESC, id DESC)`                                                                 | Admin list toàn bộ category           |
+| `products(is_active, created_at DESC, id DESC)`                                                        | Public list các sản phẩm còn bán      |
+| `products(category_id, is_active, created_at DESC, id DESC)`                                           | Public list theo danh mục             |
+| `products(created_at DESC, id DESC)`                                                                   | Admin list không filter active        |
+| UNIQUE `reviews(user_id, product_id)`                                                                  | Một user một review/product           |
+| `reviews(product_id, created_at DESC, id DESC)`                                                        | List review sản phẩm                  |
+| `orders(user_id, created_at DESC, id DESC)`                                                            | Lịch sử đơn của customer              |
+| `orders(status, created_at DESC, id DESC)`                                                             | Admin list theo trạng thái            |
+| `orders(created_at DESC, id DESC)`                                                                     | Admin list không filter trạng thái    |
+| UNIQUE `orders(user_id, idempotency_key)`                                                              | Retry checkout trả đơn cũ             |
+| UNIQUE `order_items(order_id, product_id)`                                                             | Detail đơn và ngăn dòng trùng         |
+| `order_items(product_id)`                                                                              | Truy vết dòng hàng theo product       |
+| `order_status_history(order_id, created_at, id)`                                                       | Timeline trạng thái                   |
+| `order_status_history(actor_user_id)`                                                                  | FK lookup theo actor                  |
+| UNIQUE `email_notifications(auth_token_id) WHERE NOT NULL`                                             | Một mail intent cho mỗi auth token    |
+| UNIQUE `email_notifications(order_id,event_type) WHERE order_id IS NOT NULL`                           | Một mail intent cho mỗi order event   |
+| UNIQUE `email_notifications(recipient_email,event_type,report_period) WHERE report_period IS NOT NULL` | Một monthly report/admin/kỳ           |
+| `email_notifications(status, updated_at, id)`                                                          | Scheduler chọn PENDING theo batch     |
+| UNIQUE `chat_conversations(customer_id) WHERE status='OPEN'`                                           | Một support conversation mở/customer  |
+| `chat_conversations(status, last_message_at DESC, id DESC)`                                            | Admin support inbox                   |
+| `chat_conversations(assigned_admin_id, status, last_message_at DESC, id DESC)`                         | Inbox theo admin được assign          |
+| UNIQUE `chat_messages(sender_id,idempotency_key)`                                                      | Retry gửi message không tạo trùng     |
+| `chat_messages(conversation_id, created_at DESC, id DESC)`                                             | Cursor message history                |
+| `product_suggestions(customer_id, created_at DESC, id DESC)`                                           | Customer xem suggestion của mình      |
+| `product_suggestions(status, created_at DESC, id DESC)`                                                | Admin review queue                    |
+| `orders(status, completed_at, id) WHERE status='COMPLETED'`                                            | Aggregate revenue theo khoảng ngày    |
 
 UNIQUE `products(sku)`, `products(image_id)`, `categories(slug)`, `attachments(storage_key)` là business constraints và cũng có index. Đặt tên rõ, ví dụ `uq_orders_user_idempotency_key`, `ck_products_nonnegative_stock`, `idx_orders_user_created_id`; dùng đúng tên để map lỗi `23505` thành lỗi API tương ứng.
 
 Tìm kiếm `ILIKE '%keyword%'` chưa được tăng tốc bởi B-tree tên thông thường. MVP dữ liệu demo nhỏ chấp nhận query có tham số và pagination; sau khi đo mới xem xét `pg_trgm`/GIN hoặc full-text. Không hứa “đã tối ưu” chỉ vì có index: seed đủ dữ liệu, chạy `EXPLAIN (ANALYZE, BUFFERS)` cho SELECT thật, lưu query + số dòng + execution plan vào PR. Với bảng nhỏ, planner chọn sequential scan vẫn có thể hợp lý.
+
+**Ngoại lệ đã làm sớm — `users.username`/`users.email` (PR08):** thêm `pg_trgm` + GIN trigram index ngay thay vì đợi “sau khi đo”, vì chi phí thấp trên bảng nhỏ và tránh phải quay lại viết thêm migration khi seed data lớn hơn. TypeORM 0.3.x **không hỗ trợ khai operator class (`gin_trgm_ops`) qua `@Index()`** — thử `{ using: 'gin' }` compiler báo thẳng `'using' does not exist in type 'IndexOptions'`. Hai index này chỉ tồn tại trong migration (`AddUsersSearchTrigramIndexes`), không có metadata tương ứng trên entity — xem CODING_STANDARD.md mục 18.10 về hệ quả với `migration:generate`.
 
 ## 6. Checkout: transaction bảo vệ tiền và tồn
 

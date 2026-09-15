@@ -995,6 +995,18 @@ Logic quyết định "cùng key + cùng hash → trả lại kết quả cũ; c
 
 ---
 
+## 18.10 — Index dùng operator class (`pg_trgm`/GIN cho `ILIKE`) không khai được qua `@Index()` — `migration:generate` sẽ luôn đề xuất xoá, phải tự bỏ dòng đó
+
+**Bối cảnh:** `GET /admin/users?q=` (PR08) cần `pg_trgm` + GIN trigram index để tăng tốc `ILIKE '%keyword%'` (mục 18 trên, "Tìm kiếm ILIKE"). TypeORM 0.3.x `IndexOptions` **không có field nào để khai operator class** (`gin_trgm_ops`) — thử `@Index('name', ['col'], { using: 'gin' })` compiler báo thẳng `'using' does not exist in type 'IndexOptions'` (đã test thật, không phải đoán từ doc). Nghĩa là 2 index `idx_users_username_trgm`/`idx_users_email_trgm` **không thể** có metadata tương ứng trên entity — chỉ tồn tại trong migration (`AddUsersSearchTrigramIndexes`), tạo bằng raw SQL (`CREATE INDEX ... USING gin (col gin_trgm_ops)`).
+
+**Hệ quả đã verify thật:** vì entity không "biết" 2 index này tồn tại, mọi lần chạy `migration:generate` sau đó — kể cả cho một thay đổi entity hoàn toàn không liên quan — sẽ tự sinh thêm `DROP INDEX "idx_users_username_trgm"` và `DROP INDEX "idx_users_email_trgm"` vào file migration mới (TypeORM coi đây là "index lạ" so với metadata, đề xuất dọn). `down()` do TypeORM tự sinh còn tái tạo lại 2 index đó **không có** `gin_trgm_ops` (thành B-tree thường, mất tác dụng tăng tốc `ILIKE`) — sai cả 2 chiều nếu áp dụng nhầm.
+
+**Rule:** trước khi apply bất kỳ migration nào do `migration:generate` sinh ra, nếu file có dòng `DROP INDEX` nhắm vào `idx_users_username_trgm`/`idx_users_email_trgm` (hoặc bất kỳ index dùng operator class tương tự thêm sau này) — **xoá thủ công 2 dòng đó khỏi file** trước khi review/apply, không coi "migration:generate không báo No changes" là lỗi cần điều tra lại từ đầu mỗi lần.
+
+**Áp dụng:** khi cần thêm index dùng operator class không chuẩn (GIN trigram, GiST, partial index với biểu thức phức tạp TypeORM không hỗ trợ...), viết migration tay (`migration:create`, không phải `migration:generate`), ghi rõ comment WHY tại chỗ khai (mục 13) giải thích lý do không đưa vào entity — và thêm luôn tên index đó vào danh sách cần tự lọc ở rule trên, không để rải rác chỉ trong 1 file migration.
+
+---
+
 ## 27. Checklist trước khi tạo PR
 
 - [ ] Controller không chứa business logic — chỉ gọi service. Kể cả dựng response DTO (`XxxResponseDto.fromEntity()`) cũng phải nằm trong service, không gọi thẳng từ controller (mục 3).
@@ -1036,3 +1048,4 @@ Logic quyết định "cùng key + cùng hash → trả lại kết quả cũ; c
 - [ ] Handler WebSocket gateway không tự query DB/xử lý nghiệp vụ — chỉ gọi service, cùng nguyên tắc controller mỏng (mục 24).
 - [ ] Handler `@Cron()` mới tự chống chạy chồng lấn (`isRunning`/advisory lock) và có giới hạn batch tường minh (mục 25).
 - [ ] Field tiền (VND) nhận dạng `string` đã validate cận trước khi ép `Number` để tính, không dùng `parseFloat` trực tiếp lên input chưa kiểm (mục 26).
+- [ ] File migration mới do `migration:generate` sinh ra không vô tình chứa `DROP INDEX` cho `idx_users_username_trgm`/`idx_users_email_trgm` (hoặc index operator-class khác không khai được qua `@Index()`) — xoá dòng đó trước khi apply (mục 18.10).
