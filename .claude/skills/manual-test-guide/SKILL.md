@@ -23,7 +23,7 @@ Argument có thể là số PR tường minh (vd `/manual-test-guide 8` hoặc `
 
 Tìm file `docs/testing/prXX-manual-test-guide.md` có số PR lớn nhất nhưng nhỏ hơn số PR hiện tại (đang viết PR08 thì đọc PR07; không có PR07 thì lùi tiếp PR06...), đọc bằng Read tool.
 
-**Chỉ học theo**: cách đặt tên mục theo trình tự nghiệp vụ (`## 1. <Tên hành động> — \`METHOD /path\``), cách đánh số case lỗi/edge (`### 1a. Test lỗi — ...` / `### 1a. Test edge — ...`), cách trình bày request/response mẫu, mục mở đầu "0. Chuẩn bị", mục kết "Tổng hợp bằng chứng cho PR".
+**Chỉ học theo**: cách đặt tên mục theo trình tự nghiệp vụ (`## 1. <Tên hành động> — \`METHOD /path\``), cách đánh số case lỗi/edge (`### 1a. Test lỗi — ...`/`### 1a. Test edge — ...`), cách trình bày request/response mẫu, mục mở đầu "0. Chuẩn bị", mục kết "Tổng hợp bằng chứng cho PR".
 
 **Không copy outline** của file cũ — số mục, tên mục, công cụ demo (Postman hay Swagger UI) phải sinh lại từ diff thật của PR hiện tại (Bước 3). PR06 dùng Postman, PR07 dùng Swagger UI vì lý do nghiệp vụ khác nhau — không có "khung chuẩn" cố định để hardcode vào skill này.
 
