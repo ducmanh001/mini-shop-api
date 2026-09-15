@@ -10,5 +10,7 @@
   "tokenRevoked": "Your session has expired, please log in again",
   "currentPasswordIncorrect": "Current password is incorrect",
   "atLeastOneFieldRequired": "At least one field must be provided",
-  "userNotFound": "User not found"
+  "userNotFound": "User not found",
+  "cannotChangeOwnStatus": "Admins cannot change their own account status",
+  "invalidUserStatusTransition": "This account cannot be moved to the requested status"
 }

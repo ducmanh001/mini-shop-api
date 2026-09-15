@@ -10,5 +10,7 @@
   "tokenRevoked": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
   "currentPasswordIncorrect": "Mật khẩu hiện tại không đúng",
   "atLeastOneFieldRequired": "Phải có ít nhất một field",
-  "userNotFound": "Không tìm thấy user"
+  "userNotFound": "Không tìm thấy user",
+  "cannotChangeOwnStatus": "Admin không thể tự đổi trạng thái tài khoản của chính mình",
+  "invalidUserStatusTransition": "Không thể chuyển tài khoản này sang trạng thái yêu cầu"
 }

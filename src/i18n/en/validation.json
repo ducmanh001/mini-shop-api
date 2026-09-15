@@ -19,8 +19,9 @@
   "MIN_LENGTH_BODY": "Body must not be empty",
   "MAX_LENGTH_BODY": "Body must not exceed the allowed length",
   "MIN_LIMIT": "Limit must be at least 1",
-  "MAX_LIMIT": "Limit must not exceed 100",
+  "MAX_LIMIT": "Limit must not exceed 50",
   "MIN_OFFSET": "Offset must not be negative",
+  "MAX_LENGTH_SEARCH_KEYWORD": "Search keyword must not exceed 100 characters",
   "PASSWORDS_DO_NOT_MATCH": "Passwords do not match",
   "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from the current password"
 }

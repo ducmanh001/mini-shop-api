@@ -19,8 +19,9 @@
   "MIN_LENGTH_BODY": "Nội dung không được để trống",
   "MAX_LENGTH_BODY": "Nội dung vượt quá độ dài cho phép",
   "MIN_LIMIT": "Limit phải lớn hơn hoặc bằng 1",
-  "MAX_LIMIT": "Limit không được vượt quá 100",
+  "MAX_LIMIT": "Limit không được vượt quá 50",
   "MIN_OFFSET": "Offset không được âm",
+  "MAX_LENGTH_SEARCH_KEYWORD": "Từ khóa tìm kiếm không được vượt quá 100 ký tự",
   "PASSWORDS_DO_NOT_MATCH": "Mật khẩu xác nhận không khớp",
   "NEW_PASSWORD_SAME_AS_CURRENT": "Mật khẩu mới phải khác mật khẩu hiện tại"
 }

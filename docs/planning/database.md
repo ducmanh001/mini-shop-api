@@ -419,6 +419,7 @@ Primary key và UNIQUE đã tạo index tương ứng; không tạo thêm index 
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------ |
 | UNIQUE `users(email)` và `users(username)`                                                             | Login; kiểm tra đăng ký trùng        |
 | `users(status, created_at DESC, id DESC)`                                                              | Admin lọc user theo trạng thái       |
+| `users(created_at DESC, id DESC)`                                                                      | Admin list user không filter status  |
 | `auth_tokens(user_id, type, created_at DESC)`                                                          | Vô hiệu/tìm token mới của user       |
 | UNIQUE `auth_tokens(token_hash)`                                                                       | Verify token không quét bảng         |
 | UNIQUE `cart_items(user_id, product_id)`                                                               | Đọc/sửa giỏ theo user và product     |
