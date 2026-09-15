@@ -114,7 +114,7 @@ src/modules/orders/
 
 **Vì sao:** bọc `controllers/`/`services/` quanh đúng 1 file/module không thêm giá trị tra cứu — tên file `.controller.ts`/`.service.ts` đã tự nói vai trò, còn thêm 1 cấp thư mục chỉ làm sâu path không cần thiết. Ngược lại, `dto/`, `entities/`... thực sự có nhiều file nên tách riêng mới giúp tìm nhanh.
 
-**Áp dụng:** mặc định để `{feature}.controller.ts`, `{feature}.service.ts`, `{feature}.module.ts` phẳng ở root. Chỉ tạo `controllers/`/`services/` subfolder khi module **thật sự** có từ 2 controller hoặc 2 service trở lên (vd: cần tách controller public và controller admin).
+**Áp dụng:** mặc định để `{feature}.controller.ts`, `{feature}.service.ts`, `{feature}.module.ts` phẳng ở root, **kể cả khi module có 2 controller/service** (vd: public + admin, như `users.controller.ts`/`admin-users.controller.ts`) — tên file đã phân biệt rõ vai trò nên không cần thêm cấp `controllers/`/`services/`. Chỉ tách subfolder khi số lượng vượt quá 2 và việc liệt kê phẳng ở root bắt đầu rối — chưa có module nào trong Mini Shop thật sự cần tới mức đó.
 
 ---
 
