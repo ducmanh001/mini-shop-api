@@ -1,3 +1,5 @@
+import { UserStatus } from '../enums/user-status.enum';
+
 /** bcrypt cost factor — dùng chung cho mọi nơi hash password (seed CLI, auth service ở PR06). */
 export const SALT_ROUNDS = 10;
 
@@ -21,3 +23,15 @@ export const USERNAME_PATTERN = /^[a-z0-9_]+$/;
 
 /** `users.email varchar(254)` — database.md mục 4. Dùng chung cho đăng ký (`auth`) và PR07. */
 export const MAX_EMAIL_LENGTH = 254;
+
+/** `GET /admin/users?q=` — api-contract.md: "q tìm username/email... tối đa 100 ký tự" (PR08). */
+export const USER_SEARCH_KEYWORD_MAX_LENGTH = 100;
+
+/**
+ * Giá trị `status` hợp lệ cho `PATCH /admin/users/:id/status` — chỉ ACTIVE/INACTIVE, không nhận
+ * PENDING qua endpoint này (api-contract.md, `UserStatusRequest`; database.md mục 4 — "users").
+ */
+export const MUTABLE_USER_STATUSES = [
+  UserStatus.ACTIVE,
+  UserStatus.INACTIVE,
+] as const;

@@ -7,6 +7,8 @@ import {
 import { I18nService } from 'nestjs-i18n';
 import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { Order } from '../orders/entities/order.entity';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { User } from './entities/user.entity';
 import { UserStatus } from './enums/user-status.enum';
 import { UsersService } from './users.service';
@@ -41,7 +43,23 @@ function mockUpdateQueryBuilder(repository: { createQueryBuilder: jest.Mock }) {
     update: jest.fn().mockReturnThis(),
     set,
     where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
     execute: jest.fn().mockResolvedValue({ affected: 1 }),
+  };
+  repository.createQueryBuilder.mockReturnValue(builder);
+  return builder;
+}
+
+/** Dùng cho `listUsers` — mock chain `select().orderBy().addOrderBy().take().skip().andWhere().getManyAndCount()`. */
+function mockSelectQueryBuilder(repository: { createQueryBuilder: jest.Mock }) {
+  const builder = {
+    select: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
   };
   repository.createQueryBuilder.mockReturnValue(builder);
   return builder;
@@ -49,8 +67,9 @@ function mockUpdateQueryBuilder(repository: { createQueryBuilder: jest.Mock }) {
 
 describe('UsersService', () => {
   let usersRepository: jest.Mocked<
-    Pick<Repository<User>, 'create' | 'save' | 'findOne' | 'update'>
+    Pick<Repository<User>, 'create' | 'save' | 'findOne' | 'update' | 'exists'>
   > & { createQueryBuilder: jest.Mock };
+  let ordersRepository: jest.Mocked<Pick<Repository<Order>, 'count'>>;
   let i18n: { t: jest.Mock };
   let service: UsersService;
 
@@ -60,13 +79,18 @@ describe('UsersService', () => {
       save: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
+      exists: jest.fn(),
       createQueryBuilder: jest.fn(),
+    };
+    ordersRepository = {
+      count: jest.fn(),
     };
     i18n = { t: jest.fn((key: string) => key) };
     bcrypt.hash.mockResolvedValue('hashed-new-password');
     bcrypt.compare.mockResolvedValue(false);
     service = new UsersService(
       usersRepository as unknown as Repository<User>,
+      ordersRepository as unknown as Repository<Order>,
       i18n as unknown as I18nService,
     );
   });
@@ -389,6 +413,173 @@ describe('UsersService', () => {
       const dto = service.toResponseDto(user, 'jwt-token');
 
       expect(dto.user.token).toBe('jwt-token');
+    });
+  });
+
+  describe('listUsers', () => {
+    function buildQuery(
+      overrides: Partial<ListUsersQueryDto> = {},
+    ): ListUsersQueryDto {
+      const query = new ListUsersQueryDto();
+      query.limit = 20;
+      query.offset = 0;
+      return Object.assign(query, overrides);
+    }
+
+    it('applies role/status/q filters and returns the paginated envelope', async () => {
+      const users = [
+        {
+          id: 'u1',
+          username: 'alice',
+          email: 'a@example.test',
+          role: UserRole.ADMIN,
+          status: UserStatus.ACTIVE,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        } as User,
+      ];
+      const builder = mockSelectQueryBuilder(usersRepository);
+      builder.getManyAndCount.mockResolvedValue([users, 1]);
+
+      const dto = await service.listUsers(
+        buildQuery({
+          role: UserRole.ADMIN,
+          status: UserStatus.ACTIVE,
+          q: 'ali',
+        }),
+      );
+
+      expect(builder.andWhere).toHaveBeenCalledWith('user.role = :role', {
+        role: UserRole.ADMIN,
+      });
+      expect(builder.andWhere).toHaveBeenCalledWith('user.status = :status', {
+        status: UserStatus.ACTIVE,
+      });
+      expect(builder.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('ILIKE'),
+        { q: '%ali%' },
+      );
+      expect(dto.usersCount).toBe(1);
+      expect(dto.users).toHaveLength(1);
+    });
+
+    it('skips optional filters when not provided', async () => {
+      const builder = mockSelectQueryBuilder(usersRepository);
+
+      await service.listUsers(buildQuery());
+
+      expect(builder.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('escapes % and _ in the search keyword before wrapping it for ILIKE', async () => {
+      const builder = mockSelectQueryBuilder(usersRepository);
+
+      await service.listUsers(buildQuery({ q: '50%_off' }));
+
+      expect(builder.andWhere).toHaveBeenCalledWith(expect.any(String), {
+        q: '%50\\%\\_off%',
+      });
+    });
+  });
+
+  describe('getAdminUserDetail', () => {
+    it('throws NotFoundException when the user does not exist', async () => {
+      usersRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getAdminUserDetail('missing'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns the detail envelope with a separately-counted orderCount', async () => {
+      usersRepository.findOne.mockResolvedValue({
+        id: 'u1',
+        username: 'alice',
+        email: 'a@example.test',
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        emailVerifiedAt: null,
+      } as User);
+      ordersRepository.count.mockResolvedValue(3);
+
+      const dto = await service.getAdminUserDetail('u1');
+
+      expect(ordersRepository.count).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+      });
+      expect(dto.user.orderCount).toBe(3);
+    });
+  });
+
+  describe('updateUserStatus', () => {
+    it('throws ConflictException when an admin targets their own account', async () => {
+      await expect(
+        service.updateUserStatus('admin-1', UserStatus.INACTIVE, 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(usersRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('bumps tokenVersion when deactivating', async () => {
+      const builder = mockUpdateQueryBuilder(usersRepository);
+      usersRepository.findOne.mockResolvedValue({
+        id: 'u1',
+        username: 'alice',
+        email: 'a@example.test',
+        role: UserRole.CUSTOMER,
+        status: UserStatus.INACTIVE,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        emailVerifiedAt: new Date('2026-01-01T00:00:00.000Z'),
+      } as User);
+      ordersRepository.count.mockResolvedValue(0);
+
+      await service.updateUserStatus('u1', UserStatus.INACTIVE, 'admin-1');
+
+      const setArg = builder.set.mock.calls[0][0] as unknown as {
+        status: UserStatus;
+        tokenVersion: () => string;
+      };
+      expect(setArg.status).toBe(UserStatus.INACTIVE);
+      expect(setArg.tokenVersion()).toBe('token_version + 1');
+    });
+
+    it('does not bump tokenVersion when reactivating', async () => {
+      const builder = mockUpdateQueryBuilder(usersRepository);
+      usersRepository.findOne.mockResolvedValue({
+        id: 'u1',
+        username: 'alice',
+        email: 'a@example.test',
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        emailVerifiedAt: new Date('2026-01-01T00:00:00.000Z'),
+      } as User);
+      ordersRepository.count.mockResolvedValue(0);
+
+      await service.updateUserStatus('u1', UserStatus.ACTIVE, 'admin-1');
+
+      const setArg = builder.set.mock.calls[0][0] as Record<string, unknown>;
+      expect(setArg.status).toBe(UserStatus.ACTIVE);
+      expect(setArg.tokenVersion).toBeUndefined();
+    });
+
+    it('throws NotFoundException when the target user does not exist', async () => {
+      const builder = mockUpdateQueryBuilder(usersRepository);
+      builder.execute.mockResolvedValue({ affected: 0 });
+      usersRepository.exists.mockResolvedValue(false);
+
+      await expect(
+        service.updateUserStatus('missing', UserStatus.ACTIVE, 'admin-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws ConflictException when the transition is not allowed (e.g. still PENDING)', async () => {
+      const builder = mockUpdateQueryBuilder(usersRepository);
+      builder.execute.mockResolvedValue({ affected: 0 });
+      usersRepository.exists.mockResolvedValue(true);
+
+      await expect(
+        service.updateUserStatus('u1', UserStatus.ACTIVE, 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 });

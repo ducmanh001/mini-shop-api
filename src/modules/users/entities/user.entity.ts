@@ -22,6 +22,9 @@ import { UserStatus } from '../enums/user-status.enum';
 @Unique('uq_users_email', ['email'])
 @Unique('uq_users_username', ['username'])
 @Index('idx_users_status_created_id', ['status', 'createdAt', 'id'])
+// `status` là filter tùy chọn ở GET /admin/users — ORDER BY chạy cả khi không lọc status nên cần
+// index riêng (CODING_STANDARD.md mục 18.1), cùng cặp filtered/unfiltered như orders/products/categories.
+@Index('idx_users_created_id', ['createdAt', 'id'])
 @Check('ck_users_email_normalized', `email = lower(btrim(email))`)
 @Check('ck_users_username_normalized', `username = lower(btrim(username))`)
 @Check('ck_users_token_version_nonnegative', `token_version >= 0`)
