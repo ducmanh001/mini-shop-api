@@ -60,7 +60,7 @@ src/
 
 ### 2.2 Cấu trúc trong một Module
 
-Nguyên tắc: **file nào một-module-một-cái** (controller, service, module) thì để phẳng ngay ở root module — tên file đã có hậu tố `.controller.ts`/`.service.ts` nên không cần bọc thêm folder. **File nào một module có thể có nhiều cái** (DTO, entity, guard, constant, interface...) thì mới tách subfolder theo vai trò.
+Nguyên tắc: **file nào một-module-một-cái** (controller, service, module) thì để phẳng ngay ở root module — tên file đã có hậu tố `.controller.ts`/`.service.ts` nên không cần bọc thêm folder. **File nào một module có thể có nhiều cái** (DTO, entity, guard, constant, interface, enum, util...) thì mới tách subfolder theo vai trò.
 
 ```
 src/modules/{feature}/
@@ -75,10 +75,15 @@ src/modules/{feature}/
 ├── interceptors/              # Interceptor factory (vd: FileInterceptor config)
 ├── constants/                 # Hằng số của module (UPPER_SNAKE_CASE)
 ├── enums/                     # Enum chỉ module này dùng (vd OrderStatus) — cross-cutting thì lên common/enums/ (mục 10)
-└── interfaces/                # Type/interface dùng chung trong module
+├── interfaces/                # Type/interface dùng chung trong module
+└── utils/                     # Helper thuần riêng của module, hậu tố `.util.ts` — cùng nhóm với dto/entities/constants
+                                # (luôn tách subfolder dù chỉ 1 file, KHÔNG áp dụng ngoại lệ "1 file thì để phẳng"
+                                # của redis/ ở mục 2.1 — đó là carve-out riêng cho infra module, không phải rule chung)
 ```
 
 **Enum của cột trạng thái (`OrderStatus`, `UserStatus`, `ChatConversationStatus`...) luôn tách ra `enums/<ten>.enum.ts`, không khai `export enum` ngay trong file entity dùng nó** — dù enum đó chỉ dùng trong đúng 1 module (không đủ điều kiện lên `common/enums/` theo mục 10). Lý do: cùng một logic với việc tách interface ra `interfaces/` (mục 4) — file entity chỉ nên chứa đúng 1 thứ (định nghĩa bảng), còn enum là một khái niệm nghiệp vụ độc lập mà DTO/service/entity khác trong module đều cần import; để enum trong entity buộc mọi nơi khác phải `import { OrderStatus } from '../entities/order.entity'`, kéo theo cả file entity chỉ để lấy 1 enum. Đây từng là lỗ hổng thật trong repo: `UserRole` được tách ra `common/enums/` (vì lý do cross-module ở mục 10), nhưng 6 enum còn lại (`AuthTokenType`, `UserStatus`, `OrderStatus`, `EmailNotificationEventType`, `EmailNotificationStatus`, `ChatConversationStatus`, `ProductSuggestionStatus`) vẫn nằm trong entity — không nhất quán dù không có lý do kỹ thuật nào biện minh cho sự khác biệt đó.
+
+**`utils/` (helper thuần riêng của module, hậu tố `.util.ts`) luôn tách subfolder ngay cả khi chỉ có 1 file — cùng nhóm với DTO/entity/constant/interface, không phải nhóm controller/service/module.** Quyết định này chốt tại PR09 khi thêm `src/modules/attachments/utils/attachment-signature.util.ts` (file `.util.ts` cấp module đầu tiên trong repo — trước đó `.util.ts` chỉ tồn tại ở `common/utils/`). Dễ nhầm với ngoại lệ "1 file thì để phẳng" của infra module `redis/` ở mục 2.1 (`redis.constants.ts`) — nhưng ngoại lệ đó chỉ áp dụng cho `redis/` (module hạ tầng, đặt ngoài `modules/`, quy mô tối thiểu theo thiết kế), không phải rule chung cho mọi loại file ở mọi module nghiệp vụ.
 
 Ví dụ áp dụng cho domain Mini Shop (chưa có trong repo — minh hoạ cách đặt file khi triển khai PR04 `feat/schema-seed` trở đi, theo đúng 14 bảng ở [database.md](./docs/planning/database.md)):
 

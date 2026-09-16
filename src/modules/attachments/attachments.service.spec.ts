@@ -186,13 +186,41 @@ describe('AttachmentsService', () => {
     });
   });
 
-  describe('getVisibleAttachmentStream', () => {
+  describe('listStorageKeysOlderThan', () => {
+    it('only returns files whose mtime is at least the given age', async () => {
+      const oldKey = await service.writeImageFile(pngBuffer(), 'image/png');
+      const newKey = await service.writeImageFile(pngBuffer(), 'image/png');
+      const oldTime = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      fs.utimesSync(path.join(uploadDir, oldKey), oldTime, oldTime);
+
+      const result = await service.listStorageKeysOlderThan(60 * 60 * 1000);
+
+      expect(result).toContain(oldKey);
+      expect(result).not.toContain(newKey);
+    });
+
+    it('returns an empty list when the upload dir has no files', async () => {
+      await expect(
+        service.listStorageKeysOlderThan(60 * 60 * 1000),
+      ).resolves.toEqual([]);
+    });
+
+    it('skips non-file entries (e.g. a stray subdirectory)', async () => {
+      fs.mkdirSync(path.join(uploadDir, 'stray-dir'));
+
+      await expect(service.listStorageKeysOlderThan(0)).resolves.not.toContain(
+        'stray-dir',
+      );
+    });
+  });
+
+  describe('getVisibleAttachmentFile', () => {
     it('throws NotFoundException when no visible product currently uses this image', async () => {
       const builder = mockAttachmentQueryBuilder(productsRepository);
       builder.getOne.mockResolvedValue(null);
 
       await expect(
-        service.getVisibleAttachmentStream('missing-id'),
+        service.getVisibleAttachmentFile('missing-id'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -204,10 +232,10 @@ describe('AttachmentsService', () => {
         image: { storageKey, mimeType: 'image/png' },
       });
 
-      const result = await service.getVisibleAttachmentStream('attachment-1');
+      const result = await service.getVisibleAttachmentFile('attachment-1');
 
-      expect(result.mimeType).toBe('image/png');
-      expect(await drain(result.stream)).toEqual(pngBuffer());
+      expect(result.options.type).toBe('image/png');
+      expect(await drain(result.getStream())).toEqual(pngBuffer());
     });
   });
 });

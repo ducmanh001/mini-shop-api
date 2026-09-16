@@ -9,10 +9,11 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AttachmentsService } from './attachments.service';
+import { ATTACHMENT_ROUTE_PATH } from './constants/attachments.constants';
 
 /** FILE-01 (PR09) — ảnh sản phẩm công khai, chỉ khi còn là ảnh hiện tại của product visible. */
 @ApiTags('attachments')
-@Controller('attachments')
+@Controller(ATTACHMENT_ROUTE_PATH)
 export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
@@ -27,8 +28,6 @@ export class AttachmentsController {
   async getAttachment(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<StreamableFile> {
-    const { stream, mimeType } =
-      await this.attachmentsService.getVisibleAttachmentStream(id);
-    return new StreamableFile(stream, { type: mimeType });
+    return this.attachmentsService.getVisibleAttachmentFile(id);
   }
 }

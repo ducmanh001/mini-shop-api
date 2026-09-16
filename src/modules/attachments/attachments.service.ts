@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  StreamableFile,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,7 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import * as path from 'path';
 import { EntityManager, Repository } from 'typeorm';
 import { Product } from '../products/entities/product.entity';
-import { detectImageMimeType } from './attachment-signature.util';
+import { detectImageMimeType } from './utils/attachment-signature.util';
 import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
   ATTACHMENT_MIME_TYPE_EXTENSIONS,
@@ -30,12 +31,12 @@ export class AttachmentsService {
      * (attachments là module lá, xem CODING_STANDARD.md mục 10, cùng pattern reviews→orders). */
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
-    config: ConfigService,
+    private readonly config: ConfigService,
     private readonly i18n: I18nService,
   ) {
     this.uploadDir = path.resolve(
       process.cwd(),
-      config.getOrThrow<string>('UPLOAD_DIR'),
+      this.config.getOrThrow<string>('UPLOAD_DIR'),
     );
     fs.mkdirSync(this.uploadDir, { recursive: true });
   }
@@ -74,8 +75,8 @@ export class AttachmentsService {
 
   /**
    * Best-effort — filesystem không rollback được cùng DB transaction (mục 6, database.md
-   * "attachments"). Không có cron sweep ở PR09 (ngoài phạm vi, api-contract.md dòng 472); lỗi ở
-   * đây chỉ log, không throw, để không làm fail request đã commit DB thành công.
+   * "attachments"): lỗi ở đây chỉ log, không throw, để không làm fail request đã commit DB thành
+   * công. `AttachmentsCleanupService` quét định kỳ để dọn nốt file mà lần gọi này thất bại.
    */
   async deleteFileByStorageKey(storageKey: string): Promise<void> {
     try {
@@ -122,11 +123,10 @@ export class AttachmentsService {
   /**
    * FILE-01 — chỉ phục vụ ảnh đang là ảnh hiện tại của một product visible (`isActive` và category
    * `isActive`), không phục vụ file mồ côi/ảnh đã bị thay chỉ vì đoán đúng UUID (api-contract.md
-   * dòng 432).
+   * dòng 432). Dựng `StreamableFile` ngay trong service — controller chỉ gọi lại (mục 3
+   * CODING_STANDARD.md áp dụng cho mọi kiểu response, không riêng JSON).
    */
-  async getVisibleAttachmentStream(
-    id: string,
-  ): Promise<{ stream: fs.ReadStream; mimeType: AttachmentMimeType }> {
+  async getVisibleAttachmentFile(id: string): Promise<StreamableFile> {
     const product = await this.productsRepository
       .createQueryBuilder('product')
       .innerJoin('product.category', 'category')
@@ -140,10 +140,33 @@ export class AttachmentsService {
     if (!product?.image) {
       throw new NotFoundException(this.i18n.t('errors.attachmentNotFound'));
     }
-    return {
-      stream: fs.createReadStream(this.resolvePath(product.image.storageKey)),
-      mimeType: product.image.mimeType,
-    };
+    const stream = fs.createReadStream(
+      this.resolvePath(product.image.storageKey),
+    );
+    return new StreamableFile(stream, { type: product.image.mimeType });
+  }
+
+  /**
+   * Liệt kê tên file trên đĩa đã cũ hơn `minAgeMs` — dùng cho `AttachmentsCleanupService`. Chỉ trả
+   * tên file, không tự kiểm tra DB (đó là việc của caller, giữ đúng ranh giới: service này chỉ
+   * biết filesystem, không biết attachment nào còn "in use").
+   */
+  async listStorageKeysOlderThan(minAgeMs: number): Promise<string[]> {
+    const entries = await fs.promises.readdir(this.uploadDir, {
+      withFileTypes: true,
+    });
+    const now = Date.now();
+    const storageKeys: string[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      const stats = await fs.promises.stat(this.resolvePath(entry.name));
+      if (now - stats.mtimeMs >= minAgeMs) {
+        storageKeys.push(entry.name);
+      }
+    }
+    return storageKeys;
   }
 
   private resolvePath(storageKey: string): string {
