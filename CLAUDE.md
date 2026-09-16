@@ -23,4 +23,4 @@ NestJS + TypeORM + PostgreSQL ecommerce backend, làm trong mock project có men
 
 ## Trước khi mở PR
 
-Chạy `/pr-self-review` (thêm `fix` để tự sửa luôn FAIL 🔴: `/pr-self-review fix`). Sau bất kỳ thay đổi code nào, verify bằng đúng script có sẵn trong `package.json`: `npm run build`, `npm run lint:check`, `npx prettier --check .`, `npm run test:cov`, và nếu có sửa entity thì `npm run migration:generate -- <tmp-name>` phải báo "No changes" (trừ khi thực sự đổi schema).
+Chạy `/pr-self-review` (thêm `fix` để tự sửa luôn FAIL 🔴: `/pr-self-review fix`). Sau bất kỳ thay đổi code nào, verify bằng đúng script có sẵn trong `package.json`: `npm run build`, `npm run lint:check`, `npx prettier --check .`, `npm run test:cov`, `npm run test:e2e`, và nếu có sửa entity thì `npm run migration:generate -- <tmp-name>` phải báo "No changes" (trừ khi thực sự đổi schema).

@@ -5,6 +5,7 @@ import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
   MAX_ATTACHMENT_SIZE_BYTES,
 } from '../constants/attachments.constants';
+import type { AttachmentMimeType } from '../interfaces/attachment-mime-type.type';
 
 /**
  * Metadata file — nội dung file thật nằm ở storage, không phải DB. Chỉ admin upload ảnh gắn với
@@ -25,7 +26,7 @@ export class Attachment extends UuidBaseEntity {
   storageKey: string;
 
   @Column({ name: 'mime_type', type: 'varchar', length: 100 })
-  mimeType: (typeof ALLOWED_ATTACHMENT_MIME_TYPES)[number];
+  mimeType: AttachmentMimeType;
 
   @Column({ name: 'size_bytes', type: 'int' })
   sizeBytes: number;

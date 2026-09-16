@@ -38,6 +38,7 @@ Nguồn: [nestjs-mock-project#7](https://github.com/thaind-2785/nestjs-mock-proj
 - [ ] 🔴 Ghi file ngoài DB trước khi transaction chạy — đã có cơ chế dọn file mồ côi khi transaction lỗi (mục 6).
 - [ ] 🔴 Nhiều lock lồng nhau trong 1 transaction dùng đúng thứ tự lock cố định, tránh deadlock — áp dụng cho mọi transaction đa lock, không chỉ checkout (mục 22, nguồn: #9).
 - [ ] Đọc-rồi-ghi trên 1 row có thể bị nhiều request đua (tồn kho, đổi trạng thái đơn, mở conversation) dùng atomic UPDATE hoặc `pessimistic_write`, không chỉ transaction (mục 22).
+- [ ] `lock: { mode: 'pessimistic_write' }` không dùng chung `relations`/join khi cột phía kia nullable — Postgres cấm `FOR UPDATE` trên vế NULL-able của outer join; nạp quan hệ (category, image...) bằng query riêng, không lock, sau khi ghi xong (mục 22, nguồn: PR09 `products.service.ts`).
 
 ### Code Structure
 
