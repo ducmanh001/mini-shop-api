@@ -23,5 +23,9 @@
   "MIN_OFFSET": "Offset must not be negative",
   "MAX_LENGTH_SEARCH_KEYWORD": "Search keyword must not exceed 100 characters",
   "PASSWORDS_DO_NOT_MATCH": "Passwords do not match",
-  "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from the current password"
+  "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from the current password",
+  "IS_BOOLEAN": "This field must be a boolean",
+  "INVALID_BOOLEAN_STRING": "This field must be exactly \"true\" or \"false\"",
+  "MAX_LENGTH_SLUG": "Slug must not exceed 120 characters",
+  "INVALID_SLUG_FORMAT": "Slug can only contain lowercase letters, digits, and single hyphens between words"
 }

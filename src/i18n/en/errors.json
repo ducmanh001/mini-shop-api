@@ -12,5 +12,8 @@
   "atLeastOneFieldRequired": "At least one field must be provided",
   "userNotFound": "User not found",
   "cannotChangeOwnStatus": "Admins cannot change their own account status",
-  "invalidUserStatusTransition": "This account cannot be moved to the requested status"
+  "invalidUserStatusTransition": "This account cannot be moved to the requested status",
+  "categoryNotFound": "Category not found",
+  "categorySlugAlreadyTaken": "This slug is already taken",
+  "categoryInUse": "This category still has products and cannot be deleted"
 }

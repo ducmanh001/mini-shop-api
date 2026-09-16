@@ -23,5 +23,9 @@
   "MIN_OFFSET": "Offset không được âm",
   "MAX_LENGTH_SEARCH_KEYWORD": "Từ khóa tìm kiếm không được vượt quá 100 ký tự",
   "PASSWORDS_DO_NOT_MATCH": "Mật khẩu xác nhận không khớp",
-  "NEW_PASSWORD_SAME_AS_CURRENT": "Mật khẩu mới phải khác mật khẩu hiện tại"
+  "NEW_PASSWORD_SAME_AS_CURRENT": "Mật khẩu mới phải khác mật khẩu hiện tại",
+  "IS_BOOLEAN": "Giá trị phải là boolean",
+  "INVALID_BOOLEAN_STRING": "Giá trị chỉ được là \"true\" hoặc \"false\"",
+  "MAX_LENGTH_SLUG": "Slug không được vượt quá 120 ký tự",
+  "INVALID_SLUG_FORMAT": "Slug chỉ được chứa chữ thường, số và dấu gạch ngang đơn giữa các từ"
 }

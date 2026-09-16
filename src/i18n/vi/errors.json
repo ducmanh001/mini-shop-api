@@ -12,5 +12,8 @@
   "atLeastOneFieldRequired": "Phải có ít nhất một field",
   "userNotFound": "Không tìm thấy user",
   "cannotChangeOwnStatus": "Admin không thể tự đổi trạng thái tài khoản của chính mình",
-  "invalidUserStatusTransition": "Không thể chuyển tài khoản này sang trạng thái yêu cầu"
+  "invalidUserStatusTransition": "Không thể chuyển tài khoản này sang trạng thái yêu cầu",
+  "categoryNotFound": "Không tìm thấy danh mục",
+  "categorySlugAlreadyTaken": "Slug này đã được sử dụng",
+  "categoryInUse": "Danh mục này vẫn còn sản phẩm nên không thể xóa"
 }
