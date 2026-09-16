@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
@@ -148,6 +149,13 @@ export class AdminProductsController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(createProductImageUploadInterceptor())
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
   @ApiOperation({ summary: 'Upload or replace a product image (admin)' })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,

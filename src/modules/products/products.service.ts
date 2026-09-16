@@ -328,7 +328,7 @@ export class ProductsService {
   /** FILE-03 — 204 kể cả khi product chưa có ảnh; file chỉ dọn sau khi DB commit thành công. */
   async deleteProductImage(id: string, actorId: string): Promise<void> {
     let oldStorageKey: string | null = null;
-    let hadImage = false;
+    let hasImage = false;
 
     await this.dataSource.transaction(async (manager) => {
       const productRepository = manager.getRepository(Product);
@@ -343,7 +343,7 @@ export class ProductsService {
       if (!lockedProduct.imageId) {
         return;
       }
-      hadImage = true;
+      hasImage = true;
       oldStorageKey = await this.attachmentsService.findStorageKeyById(
         lockedProduct.imageId,
         manager,
@@ -358,7 +358,7 @@ export class ProductsService {
     if (oldStorageKey) {
       await this.attachmentsService.deleteFileByStorageKey(oldStorageKey);
     }
-    if (hadImage) {
+    if (hasImage) {
       this.logger.log(`Admin ${actorId} removed image of product ${id}`);
     }
   }
