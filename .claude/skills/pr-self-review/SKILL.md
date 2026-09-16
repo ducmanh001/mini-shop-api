@@ -61,5 +61,5 @@ Có `fix` → với từng mục **FAIL 🔴** (bỏ qua 🟡 — luôn cần us
 
 - Nếu là lỗi máy móc, sửa rõ ràng theo đúng mục checklist trỏ tới (thêm `.select()`, tách constant, đổi `findOne` → `exists()`, tách interface/enum ra file riêng...) — sửa trực tiếp, không hỏi lại.
 - Nếu việc sửa đòi hỏi quyết định kiến trúc/nghiệp vụ (vd đổi cấu trúc bảng, đổi hành vi API) — **không tự sửa**, liệt kê riêng vào nhóm "cần bạn quyết định" trong tóm tắt cuối, kèm lý do tại sao không tự sửa được.
-- Sau khi sửa xong tất cả mục có thể sửa máy móc, chạy lại pipeline verify chuẩn của repo (build, lint, format check, unit test, và `migration:generate` để xác nhận không phát sinh schema drift nếu có đụng entity) — dùng đúng script trong `package.json`, không tự chế lệnh khác.
+- Sau khi sửa xong tất cả mục có thể sửa máy móc, chạy lại pipeline verify chuẩn của repo (build, lint, format check, unit test, e2e test, và `migration:generate` để xác nhận không phát sinh schema drift nếu có đụng entity) — dùng đúng script trong `package.json`, không tự chế lệnh khác.
 - In tóm tắt cuối: bao nhiêu mục đã tự sửa, bao nhiêu mục cần user quyết định (kèm lý do), và trạng thái verify (pass/fail). Không tự commit — dừng lại ở việc sửa code, để user tự xem lại và yêu cầu commit riêng.
