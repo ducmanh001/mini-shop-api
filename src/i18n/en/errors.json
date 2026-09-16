@@ -15,5 +15,7 @@
   "invalidUserStatusTransition": "This account cannot be moved to the requested status",
   "categoryNotFound": "Category not found",
   "categorySlugAlreadyTaken": "This slug is already taken",
-  "categoryInUse": "This category still has products and cannot be deleted"
+  "categoryInUse": "This category still has products and cannot be deleted",
+  "invalidImageFile": "File must be a genuine JPEG, PNG, or WebP image",
+  "attachmentNotFound": "Attachment not found"
 }

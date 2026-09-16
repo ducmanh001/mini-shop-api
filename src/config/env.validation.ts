@@ -9,6 +9,7 @@ export const envValidationSchema = Joi.object({
   API_PREFIX: Joi.string().default('api/v1'),
   PUBLIC_WEB_URL: Joi.string().uri().required(),
   APP_TIMEZONE: Joi.string().default('Asia/Bangkok'),
+  UPLOAD_DIR: Joi.string().default('storage/uploads'),
 
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().port().required(),

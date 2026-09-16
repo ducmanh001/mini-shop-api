@@ -15,5 +15,7 @@
   "invalidUserStatusTransition": "Không thể chuyển tài khoản này sang trạng thái yêu cầu",
   "categoryNotFound": "Không tìm thấy danh mục",
   "categorySlugAlreadyTaken": "Slug này đã được sử dụng",
-  "categoryInUse": "Danh mục này vẫn còn sản phẩm nên không thể xóa"
+  "categoryInUse": "Danh mục này vẫn còn sản phẩm nên không thể xóa",
+  "invalidImageFile": "File phải là ảnh JPEG, PNG hoặc WebP hợp lệ",
+  "attachmentNotFound": "Không tìm thấy file đính kèm"
 }
