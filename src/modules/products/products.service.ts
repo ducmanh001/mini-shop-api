@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,8 +16,9 @@ import {
 } from 'typeorm';
 import { escapeIlikePattern } from '../../common/utils/escape-ilike-pattern.util';
 import { isUniqueViolation } from '../../common/utils/postgres-unique-violation.util';
-import { AttachmentMimeType } from '../attachments/interfaces/attachment-mime-type.type';
 import { AttachmentsService } from '../attachments/attachments.service';
+import { ATTACHMENT_ROUTE_PATH } from '../attachments/constants/attachments.constants';
+import { AttachmentMimeType } from '../attachments/interfaces/attachment-mime-type.type';
 import { Category } from '../categories/entities/category.entity';
 import { AdminListProductsQueryDto } from './dto/admin-list-products-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -27,11 +29,11 @@ import {
   ProductsResponseDto,
 } from './dto/product-response.dto';
 import { Product } from './entities/product.entity';
-
-type CategoryDisplayFields = Pick<Category, 'id' | 'name' | 'isActive'>;
+import { CategoryDisplayFields } from './interfaces/category-display-fields.interface';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
   private readonly attachmentsBasePath: string;
 
   constructor(
@@ -41,10 +43,10 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Category>,
     private readonly dataSource: DataSource,
     private readonly attachmentsService: AttachmentsService,
-    config: ConfigService,
+    private readonly config: ConfigService,
     private readonly i18n: I18nService,
   ) {
-    this.attachmentsBasePath = `/${config.getOrThrow<string>('API_PREFIX')}/attachments`;
+    this.attachmentsBasePath = `/${this.config.getOrThrow<string>('API_PREFIX')}/${ATTACHMENT_ROUTE_PATH}`;
   }
 
   /** `GET /products` — public, chỉ product/category active (api-contract.md dòng 54, 56). */
@@ -99,7 +101,10 @@ export class ProductsService {
     );
   }
 
-  async createProduct(dto: CreateProductDto): Promise<ProductResponseDto> {
+  async createProduct(
+    dto: CreateProductDto,
+    actorId: string,
+  ): Promise<ProductResponseDto> {
     const category = await this.loadUsableCategory(dto.categoryId);
     const product = this.productsRepository.create({
       categoryId: dto.categoryId,
@@ -118,6 +123,7 @@ export class ProductsService {
     }
     product.category = category as Category;
     product.image = null;
+    this.logger.log(`Admin ${actorId} created product ${product.id}`);
     return ProductResponseDto.fromEntity(product, this.attachmentsBasePath);
   }
 
@@ -131,6 +137,7 @@ export class ProductsService {
   async patchProduct(
     id: string,
     dto: PatchProductDto,
+    actorId: string,
   ): Promise<ProductResponseDto> {
     if (
       dto.categoryId === undefined &&
@@ -201,6 +208,9 @@ export class ProductsService {
       Object.assign(lockedProduct, changes);
       lockedProduct.category = category as Category;
       lockedProduct.image = image?.image ?? null;
+      this.logger.log(
+        `Admin ${actorId} updated product ${id}: ${Object.keys(changes).join(', ')}`,
+      );
       return ProductResponseDto.fromEntity(
         lockedProduct,
         this.attachmentsBasePath,
@@ -209,10 +219,11 @@ export class ProductsService {
   }
 
   /** `DELETE /admin/products/:id` = archive, không hard-delete (lịch sử đơn giữ nguyên). */
-  async archiveProduct(id: string): Promise<void> {
+  async archiveProduct(id: string, actorId: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const productRepository = manager.getRepository(Product);
       const lockedProduct = await productRepository.findOne({
+        select: { id: true },
         where: { id },
         lock: { mode: 'pessimistic_write' },
       });
@@ -221,6 +232,7 @@ export class ProductsService {
       }
       await productRepository.update(id, { isActive: false });
     });
+    this.logger.log(`Admin ${actorId} archived product ${id}`);
   }
 
   /**
@@ -232,6 +244,7 @@ export class ProductsService {
   async replaceProductImage(
     id: string,
     file: Express.Multer.File | undefined,
+    actorId: string,
   ): Promise<ProductResponseDto> {
     if (!file) {
       throw new BadRequestException(this.i18n.t('errors.missingImageFile'));
@@ -296,6 +309,9 @@ export class ProductsService {
         outcome.previousStorageKey,
       );
     }
+    this.logger.log(
+      `Admin ${actorId} replaced image of product ${id} with attachment ${outcome.newImage.id}`,
+    );
 
     const category = await this.loadCategoryDisplayFields(
       outcome.product.categoryId,
@@ -310,12 +326,14 @@ export class ProductsService {
   }
 
   /** FILE-03 — 204 kể cả khi product chưa có ảnh; file chỉ dọn sau khi DB commit thành công. */
-  async deleteProductImage(id: string): Promise<void> {
+  async deleteProductImage(id: string, actorId: string): Promise<void> {
     let oldStorageKey: string | null = null;
+    let hadImage = false;
 
     await this.dataSource.transaction(async (manager) => {
       const productRepository = manager.getRepository(Product);
       const lockedProduct = await productRepository.findOne({
+        select: { id: true, imageId: true },
         where: { id },
         lock: { mode: 'pessimistic_write' },
       });
@@ -325,6 +343,7 @@ export class ProductsService {
       if (!lockedProduct.imageId) {
         return;
       }
+      hadImage = true;
       oldStorageKey = await this.attachmentsService.findStorageKeyById(
         lockedProduct.imageId,
         manager,
@@ -338,6 +357,9 @@ export class ProductsService {
 
     if (oldStorageKey) {
       await this.attachmentsService.deleteFileByStorageKey(oldStorageKey);
+    }
+    if (hadImage) {
+      this.logger.log(`Admin ${actorId} removed image of product ${id}`);
     }
   }
 

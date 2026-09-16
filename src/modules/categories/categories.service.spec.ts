@@ -111,11 +111,14 @@ describe('CategoriesService', () => {
 
   describe('createCategory', () => {
     it('creates a category with the given fields', async () => {
-      const result = await service.createCategory({
-        name: 'Sách',
-        slug: 'sach',
-        isActive: true,
-      });
+      const result = await service.createCategory(
+        {
+          name: 'Sách',
+          slug: 'sach',
+          isActive: true,
+        },
+        'admin-1',
+      );
 
       expect(categoriesRepository.save).toHaveBeenCalled();
       expect(result.category.slug).toBe('sach');
@@ -127,7 +130,7 @@ describe('CategoriesService', () => {
       );
 
       await expect(
-        service.createCategory({ name: 'Sách', slug: 'sach' }),
+        service.createCategory({ name: 'Sách', slug: 'sach' }, 'admin-1'),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -136,23 +139,23 @@ describe('CategoriesService', () => {
       categoriesRepository.save.mockRejectedValue(unrelatedError);
 
       await expect(
-        service.createCategory({ name: 'Sách', slug: 'sach' }),
+        service.createCategory({ name: 'Sách', slug: 'sach' }, 'admin-1'),
       ).rejects.toBe(unrelatedError);
     });
   });
 
   describe('patchCategory', () => {
     it('rejects an empty body', async () => {
-      await expect(service.patchCategory('id-1', {})).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.patchCategory('id-1', {}, 'admin-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('throws NotFoundException when the category no longer exists', async () => {
       categoriesRepository.findOneBy.mockResolvedValue(null);
 
       await expect(
-        service.patchCategory('id-1', { name: 'Sách mới' }),
+        service.patchCategory('id-1', { name: 'Sách mới' }, 'admin-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -166,9 +169,11 @@ describe('CategoriesService', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.patchCategory('id-1', {
-        name: 'Sách mới',
-      });
+      const result = await service.patchCategory(
+        'id-1',
+        { name: 'Sách mới' },
+        'admin-1',
+      );
 
       expect(categoriesRepository.update).toHaveBeenCalledWith('id-1', {
         name: 'Sách mới',
@@ -186,7 +191,7 @@ describe('CategoriesService', () => {
         updatedAt: new Date(),
       });
 
-      await service.patchCategory('id-1', { isActive: false });
+      await service.patchCategory('id-1', { isActive: false }, 'admin-1');
 
       expect(categoriesRepository.update).toHaveBeenCalledWith('id-1', {
         isActive: false,
@@ -199,7 +204,7 @@ describe('CategoriesService', () => {
       );
 
       await expect(
-        service.patchCategory('id-1', { slug: 'sach' }),
+        service.patchCategory('id-1', { slug: 'sach' }, 'admin-1'),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
@@ -208,18 +213,18 @@ describe('CategoriesService', () => {
     it('throws NotFoundException when the category does not exist', async () => {
       categoriesRepository.exists.mockResolvedValue(false);
 
-      await expect(service.deleteCategory('id-1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteCategory('id-1', 'admin-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('throws ConflictException when the category still has products', async () => {
       categoriesRepository.exists.mockResolvedValue(true);
       productsRepository.exists.mockResolvedValue(true);
 
-      await expect(service.deleteCategory('id-1')).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.deleteCategory('id-1', 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(categoriesRepository.delete).not.toHaveBeenCalled();
     });
 
@@ -227,7 +232,7 @@ describe('CategoriesService', () => {
       categoriesRepository.exists.mockResolvedValue(true);
       productsRepository.exists.mockResolvedValue(false);
 
-      await service.deleteCategory('id-1');
+      await service.deleteCategory('id-1', 'admin-1');
 
       expect(categoriesRepository.delete).toHaveBeenCalledWith('id-1');
     });
@@ -239,9 +244,9 @@ describe('CategoriesService', () => {
         buildDriverError('23503', 'products_category_id_fkey'),
       );
 
-      await expect(service.deleteCategory('id-1')).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.deleteCategory('id-1', 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('rethrows an unrelated database error unchanged', async () => {
@@ -250,7 +255,9 @@ describe('CategoriesService', () => {
       const unrelatedError = new Error('connection lost');
       categoriesRepository.delete.mockRejectedValue(unrelatedError);
 
-      await expect(service.deleteCategory('id-1')).rejects.toBe(unrelatedError);
+      await expect(service.deleteCategory('id-1', 'admin-1')).rejects.toBe(
+        unrelatedError,
+      );
     });
   });
 });

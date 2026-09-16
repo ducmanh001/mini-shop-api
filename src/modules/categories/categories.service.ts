@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,6 +24,8 @@ import { Category } from './entities/category.entity';
 
 @Injectable()
 export class CategoriesService {
+  private readonly logger = new Logger(CategoriesService.name);
+
   constructor(
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
@@ -68,7 +71,10 @@ export class CategoriesService {
     return CategoriesResponseDto.fromEntities(categories, categoriesCount);
   }
 
-  async createCategory(dto: CreateCategoryDto): Promise<CategoryResponseDto> {
+  async createCategory(
+    dto: CreateCategoryDto,
+    actorId: string,
+  ): Promise<CategoryResponseDto> {
     const category = this.categoriesRepository.create({
       name: dto.name,
       slug: dto.slug,
@@ -79,12 +85,14 @@ export class CategoriesService {
     } catch (error) {
       throw this.toConflictOrRethrow(error);
     }
+    this.logger.log(`Admin ${actorId} created category ${category.id}`);
     return CategoryResponseDto.fromEntity(category);
   }
 
   async patchCategory(
     id: string,
     dto: PatchCategoryDto,
+    actorId: string,
   ): Promise<CategoryResponseDto> {
     if (
       dto.name === undefined &&
@@ -108,6 +116,7 @@ export class CategoriesService {
     if (!category) {
       throw new NotFoundException(this.i18n.t('errors.categoryNotFound'));
     }
+    this.logger.log(`Admin ${actorId} updated category ${id}`);
     return CategoryResponseDto.fromEntity(category);
   }
 
@@ -117,7 +126,7 @@ export class CategoriesService {
    * lưới an toàn cho race thật (product được tạo giữa lúc check và lúc DELETE) — không chỉ
    * check-then-act (CODING_STANDARD.md mục 7, 22).
    */
-  async deleteCategory(id: string): Promise<void> {
+  async deleteCategory(id: string, actorId: string): Promise<void> {
     const exists = await this.categoriesRepository.exists({ where: { id } });
     if (!exists) {
       throw new NotFoundException(this.i18n.t('errors.categoryNotFound'));
@@ -136,6 +145,7 @@ export class CategoriesService {
       }
       throw error;
     }
+    this.logger.log(`Admin ${actorId} deleted category ${id}`);
   }
 
   private baseListQuery() {

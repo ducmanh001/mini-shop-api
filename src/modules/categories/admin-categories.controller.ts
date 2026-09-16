@@ -18,8 +18,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CategoriesService } from './categories.service';
@@ -74,8 +76,9 @@ export class AdminCategoriesController {
   })
   async createCategory(
     @Body() dto: CreateCategoryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<CategoryResponseDto> {
-    return this.categoriesService.createCategory(dto);
+    return this.categoriesService.createCategory(dto, currentUser.id);
   }
 
   @Patch(':id')
@@ -104,8 +107,9 @@ export class AdminCategoriesController {
   async patchCategory(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: PatchCategoryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<CategoryResponseDto> {
-    return this.categoriesService.patchCategory(id, dto);
+    return this.categoriesService.patchCategory(id, dto, currentUser.id);
   }
 
   @Delete(':id')
@@ -127,7 +131,10 @@ export class AdminCategoriesController {
     status: HttpStatus.CONFLICT,
     description: 'Category still has products (including archived)',
   })
-  async deleteCategory(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.categoriesService.deleteCategory(id);
+  async deleteCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<void> {
+    return this.categoriesService.deleteCategory(id, currentUser.id);
   }
 }

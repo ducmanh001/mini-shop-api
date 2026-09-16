@@ -21,8 +21,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { AdminListProductsQueryDto } from './dto/admin-list-products-query.dto';
@@ -82,8 +84,9 @@ export class AdminProductsController {
   })
   async createProduct(
     @Body() dto: CreateProductDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProductResponseDto> {
-    return this.productsService.createProduct(dto);
+    return this.productsService.createProduct(dto, currentUser.id);
   }
 
   @Patch(':id')
@@ -114,8 +117,9 @@ export class AdminProductsController {
   async patchProduct(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: PatchProductDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProductResponseDto> {
-    return this.productsService.patchProduct(id, dto);
+    return this.productsService.patchProduct(id, dto, currentUser.id);
   }
 
   @Delete(':id')
@@ -133,8 +137,11 @@ export class AdminProductsController {
     status: HttpStatus.NOT_FOUND,
     description: 'Product not found',
   })
-  async archiveProduct(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.productsService.archiveProduct(id);
+  async archiveProduct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<void> {
+    return this.productsService.archiveProduct(id, currentUser.id);
   }
 
   @Post(':id/image')
@@ -169,8 +176,9 @@ export class AdminProductsController {
   async replaceProductImage(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProductResponseDto> {
-    return this.productsService.replaceProductImage(id, file);
+    return this.productsService.replaceProductImage(id, file, currentUser.id);
   }
 
   @Delete(':id/image')
@@ -190,7 +198,8 @@ export class AdminProductsController {
   })
   async deleteProductImage(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<void> {
-    return this.productsService.deleteProductImage(id);
+    return this.productsService.deleteProductImage(id, currentUser.id);
   }
 }

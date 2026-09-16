@@ -289,7 +289,7 @@ describe('ProductsService', () => {
     it('creates the product when the category is usable', async () => {
       categoriesRepository.findOne.mockResolvedValue(sampleCategory());
 
-      const result = await service.createProduct(createDto);
+      const result = await service.createProduct(createDto, 'admin-1');
 
       expect(productsRepository.save).toHaveBeenCalled();
       expect(result.product.category.id).toBe('category-1');
@@ -299,9 +299,9 @@ describe('ProductsService', () => {
     it('throws NotFoundException when the category does not exist', async () => {
       categoriesRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.createProduct(createDto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.createProduct(createDto, 'admin-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(productsRepository.save).not.toHaveBeenCalled();
     });
 
@@ -310,9 +310,9 @@ describe('ProductsService', () => {
         sampleCategory({ isActive: false }),
       );
 
-      await expect(service.createProduct(createDto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.createProduct(createDto, 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('maps a duplicate SKU into ConflictException', async () => {
@@ -321,9 +321,9 @@ describe('ProductsService', () => {
         buildUniqueViolation('uq_products_sku'),
       );
 
-      await expect(service.createProduct(createDto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.createProduct(createDto, 'admin-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('rethrows an unrelated database error unchanged', async () => {
@@ -331,7 +331,7 @@ describe('ProductsService', () => {
       const unrelatedError = new Error('connection lost');
       productsRepository.save.mockRejectedValue(unrelatedError);
 
-      await expect(service.createProduct(createDto)).rejects.toBe(
+      await expect(service.createProduct(createDto, 'admin-1')).rejects.toBe(
         unrelatedError,
       );
     });
@@ -339,9 +339,9 @@ describe('ProductsService', () => {
 
   describe('patchProduct', () => {
     it('rejects an empty body with BadRequestException', async () => {
-      await expect(service.patchProduct('id-1', {})).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.patchProduct('id-1', {}, 'admin-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(dataSource.transaction).not.toHaveBeenCalled();
     });
 
@@ -349,7 +349,7 @@ describe('ProductsService', () => {
       managerProductRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.patchProduct('id-1', { name: 'New name' }),
+        service.patchProduct('id-1', { name: 'New name' }, 'admin-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(managerProductRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'id-1' },
@@ -366,7 +366,7 @@ describe('ProductsService', () => {
       managerCategoryRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.patchProduct('id-1', { categoryId: 'category-2' }),
+        service.patchProduct('id-1', { categoryId: 'category-2' }, 'admin-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -380,9 +380,13 @@ describe('ProductsService', () => {
       });
       managerCategoryRepository.findOne.mockResolvedValue(sampleCategory());
 
-      const result = await service.patchProduct('id-1', {
-        priceVnd: '160000',
-      });
+      const result = await service.patchProduct(
+        'id-1',
+        {
+          priceVnd: '160000',
+        },
+        'admin-1',
+      );
 
       expect(managerProductRepository.update).toHaveBeenCalledWith('id-1', {
         priceVnd: '160000',
@@ -403,9 +407,13 @@ describe('ProductsService', () => {
         sampleCategory({ id: 'category-2', name: 'Đồ chơi' }),
       );
 
-      const result = await service.patchProduct('id-1', {
-        categoryId: 'category-2',
-      });
+      const result = await service.patchProduct(
+        'id-1',
+        {
+          categoryId: 'category-2',
+        },
+        'admin-1',
+      );
 
       expect(managerProductRepository.update).toHaveBeenCalledWith('id-1', {
         categoryId: 'category-2',
@@ -429,9 +437,13 @@ describe('ProductsService', () => {
       });
       managerProductRepository.createQueryBuilder.mockReturnValue(imageBuilder);
 
-      const result = await service.patchProduct('id-1', {
-        isFeatured: true,
-      });
+      const result = await service.patchProduct(
+        'id-1',
+        {
+          isFeatured: true,
+        },
+        'admin-1',
+      );
 
       expect(result.product.image?.id).toBe('attachment-1');
     });
@@ -448,7 +460,7 @@ describe('ProductsService', () => {
       );
 
       await expect(
-        service.patchProduct('id-1', { sku: 'DUP-001' }),
+        service.patchProduct('id-1', { sku: 'DUP-001' }, 'admin-1'),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
@@ -457,15 +469,15 @@ describe('ProductsService', () => {
     it('throws NotFoundException for an unknown product', async () => {
       managerProductRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.archiveProduct('id-1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.archiveProduct('id-1', 'admin-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('sets isActive=false via the transaction manager', async () => {
       managerProductRepository.findOne.mockResolvedValue({ id: 'id-1' });
 
-      await service.archiveProduct('id-1');
+      await service.archiveProduct('id-1', 'admin-1');
 
       expect(managerProductRepository.update).toHaveBeenCalledWith('id-1', {
         isActive: false,
@@ -482,7 +494,7 @@ describe('ProductsService', () => {
 
     it('rejects when no file is provided', async () => {
       await expect(
-        service.replaceProductImage('id-1', undefined),
+        service.replaceProductImage('id-1', undefined, 'admin-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(attachmentsService.validateImageFile).not.toHaveBeenCalled();
     });
@@ -493,7 +505,7 @@ describe('ProductsService', () => {
       });
 
       await expect(
-        service.replaceProductImage('id-1', file),
+        service.replaceProductImage('id-1', file, 'admin-1'),
       ).rejects.toBeInstanceOf(UnsupportedMediaTypeException);
       expect(attachmentsService.writeImageFile).not.toHaveBeenCalled();
     });
@@ -503,7 +515,7 @@ describe('ProductsService', () => {
       managerProductRepository.findOne.mockResolvedValue(null); // product not found -> throws inside tx
 
       await expect(
-        service.replaceProductImage('id-1', file),
+        service.replaceProductImage('id-1', file, 'admin-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(attachmentsService.deleteFileByStorageKey).toHaveBeenCalledWith(
         'new-key.png',
@@ -526,7 +538,7 @@ describe('ProductsService', () => {
       });
       categoriesRepository.findOne.mockResolvedValue(sampleCategory());
 
-      const result = await service.replaceProductImage('id-1', file);
+      const result = await service.replaceProductImage('id-1', file, 'admin-1');
 
       expect(managerProductRepository.update).toHaveBeenCalledWith('id-1', {
         imageId: 'attachment-1',
@@ -554,7 +566,7 @@ describe('ProductsService', () => {
       attachmentsService.findStorageKeyById.mockResolvedValue('old-key.png');
       categoriesRepository.findOne.mockResolvedValue(sampleCategory());
 
-      await service.replaceProductImage('id-1', file);
+      await service.replaceProductImage('id-1', file, 'admin-1');
 
       expect(attachmentsService.deleteAttachmentRecord).toHaveBeenCalledWith(
         'old-attachment',
@@ -573,9 +585,9 @@ describe('ProductsService', () => {
     it('throws NotFoundException for an unknown product', async () => {
       managerProductRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.deleteProductImage('id-1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteProductImage('id-1', 'admin-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('is a no-op (still 204) when the product has no image', async () => {
@@ -584,7 +596,7 @@ describe('ProductsService', () => {
         imageId: null,
       });
 
-      await service.deleteProductImage('id-1');
+      await service.deleteProductImage('id-1', 'admin-1');
 
       expect(attachmentsService.findStorageKeyById).not.toHaveBeenCalled();
       expect(managerProductRepository.update).not.toHaveBeenCalled();
@@ -597,7 +609,7 @@ describe('ProductsService', () => {
       });
       attachmentsService.findStorageKeyById.mockResolvedValue('key.png');
 
-      await service.deleteProductImage('id-1');
+      await service.deleteProductImage('id-1', 'admin-1');
 
       expect(managerProductRepository.update).toHaveBeenCalledWith('id-1', {
         imageId: null,
