@@ -32,6 +32,7 @@ function mockQueryBuilder() {
     'innerJoin',
     'leftJoin',
     'select',
+    'addSelect',
     'where',
     'andWhere',
     'orderBy',
@@ -209,7 +210,7 @@ describe('ProductsService', () => {
         { categoryId: 'category-1' },
       );
       expect(builder.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('ILIKE'),
+        expect.stringContaining('unaccent(product.name) ILIKE unaccent(:q)'),
         { q: '%sổ tay%' },
       );
       expect(builder.andWhere).toHaveBeenCalledWith(
@@ -220,6 +221,24 @@ describe('ProductsService', () => {
         'product.priceVnd <= :maxPrice',
         { maxPrice: '200000' },
       );
+    });
+
+    it('ranks name matches before description-only matches when q is provided', async () => {
+      const builder = mockQueryBuilder();
+      productsRepository.createQueryBuilder.mockReturnValue(builder);
+
+      await service.listPublicProducts({ limit: 20, offset: 0, q: 'chuot' });
+
+      expect(builder.addSelect).toHaveBeenCalledWith(
+        expect.stringContaining('CASE WHEN unaccent(product.name) ILIKE'),
+        'name_match_rank',
+      );
+      expect(builder.orderBy).toHaveBeenCalledWith('name_match_rank', 'ASC');
+      expect(builder.addOrderBy).toHaveBeenCalledWith(
+        'product.createdAt',
+        'DESC',
+      );
+      expect(builder.addOrderBy).toHaveBeenCalledWith('product.id', 'DESC');
     });
   });
 

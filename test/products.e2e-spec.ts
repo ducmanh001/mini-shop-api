@@ -172,6 +172,38 @@ describe('Products (e2e)', () => {
       expect(body.productsCount).toBe(1);
       expect(body.products[0].id).toBe(target.id);
     });
+
+    it('finds Vietnamese text via an unaccented q and ranks name matches before description-only matches', async () => {
+      const adminToken = await loginAs(SEED_BOB_EMAIL);
+      const category = await createCategoryAsAdmin(adminToken);
+      const suffix = uniqueSuffix();
+      const nameMatch = await createProductAsAdmin(adminToken, category.id, {
+        name: `Chuột không dây ${suffix}`,
+      });
+      const descriptionMatch = await createProductAsAdmin(
+        adminToken,
+        category.id,
+        {
+          name: `Bàn phím cơ ${suffix}`,
+          description: `Đi kèm Chuột không dây ${suffix}`,
+        },
+      );
+
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/products')
+        .query({ q: `chuot khong day ${suffix}` })
+        .expect(200);
+
+      const body = response.body as {
+        products: { id: string }[];
+        productsCount: number;
+      };
+      expect(body.productsCount).toBe(2);
+      expect(body.products.map((p) => p.id)).toEqual([
+        nameMatch.id,
+        descriptionMatch.id,
+      ]);
+    });
   });
 
   describe('GET /products/:id (public)', () => {

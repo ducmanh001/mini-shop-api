@@ -103,7 +103,7 @@ describe('CategoriesService', () => {
         { isActive: false },
       );
       expect(builder.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('ILIKE'),
+        expect.stringContaining('unaccent(category.name) ILIKE unaccent(:q)'),
         { q: '%sach%' },
       );
     });

@@ -114,6 +114,27 @@ describe('Categories (e2e)', () => {
         inactive.id,
       );
     });
+
+    it('finds a Vietnamese-accented name via an unaccented q', async () => {
+      const adminToken = await loginAs(SEED_BOB_EMAIL);
+      const suffix = randomUUID().replace(/-/g, '').slice(0, 10);
+      const category = await createCategoryAsAdmin(adminToken, {
+        name: `Điện thoại ${suffix}`,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/admin/categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ q: `dien thoai ${suffix}` })
+        .expect(200);
+
+      const body = response.body as {
+        categories: { id: string }[];
+        categoriesCount: number;
+      };
+      expect(body.categoriesCount).toBe(1);
+      expect(body.categories[0].id).toBe(category.id);
+    });
   });
 
   describe('POST /admin/categories', () => {

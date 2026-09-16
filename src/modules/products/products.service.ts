@@ -399,10 +399,24 @@ export class ProductsService {
       });
     }
     if (query.q) {
-      queryBuilder.andWhere(
-        "(product.name ILIKE :q ESCAPE '\\' OR product.description ILIKE :q ESCAPE '\\')",
-        { q: `%${escapeIlikePattern(query.q)}%` },
-      );
+      const q = `%${escapeIlikePattern(query.q)}%`;
+      queryBuilder
+        .addSelect(
+          "CASE WHEN unaccent(product.name) ILIKE unaccent(:q) ESCAPE '\\' THEN 0 ELSE 1 END",
+          'name_match_rank',
+        )
+        .andWhere(
+          "(unaccent(product.name) ILIKE unaccent(:q) ESCAPE '\\' OR unaccent(product.description) ILIKE unaccent(:q) ESCAPE '\\')",
+          { q },
+        )
+        // Khớp tên xếp trước khớp description-only (đúng thứ tự liên quan cao hơn), rồi mới tới
+        // tiebreak mặc định — `.orderBy()` reset toàn bộ ORDER BY nên phải khai lại 2 dòng tiebreak.
+        // Order theo 1 alias đã `addSelect` (không phải raw string chứa "alias.column") vì
+        // `getManyAndCount()` kết hợp join + take/skip dùng lại orderBy để dựng subquery phân trang
+        // theo alias — 1 raw CASE chứa dấu "." khiến TypeORM parse nhầm thành tên alias không tồn tại.
+        .orderBy('name_match_rank', 'ASC')
+        .addOrderBy('product.createdAt', 'DESC')
+        .addOrderBy('product.id', 'DESC');
     }
     if (
       query.minPrice !== undefined &&

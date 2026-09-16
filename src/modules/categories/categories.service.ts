@@ -62,9 +62,10 @@ export class CategoriesService {
       });
     }
     if (query.q) {
-      queryBuilder.andWhere("category.name ILIKE :q ESCAPE '\\'", {
-        q: `%${escapeIlikePattern(query.q)}%`,
-      });
+      queryBuilder.andWhere(
+        "unaccent(category.name) ILIKE unaccent(:q) ESCAPE '\\'",
+        { q: `%${escapeIlikePattern(query.q)}%` },
+      );
     }
 
     const [categories, categoriesCount] = await queryBuilder.getManyAndCount();

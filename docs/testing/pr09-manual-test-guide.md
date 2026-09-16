@@ -93,6 +93,11 @@ tạo) — chứng minh admin thấy được cả danh mục vừa tạo ngay.
 
 `GET /admin/categories?q=dong+ho`. **Kỳ vọng:** `200`, chỉ có `NEW_CATEGORY_ID`.
 
+### 4a'. Test edge — `q` không dấu vẫn khớp tên có dấu tiếng Việt
+
+`GET /admin/categories?q=dien+thoai`. **Kỳ vọng:** `200`, đúng 1 danh mục `Điện thoại` (seed) dù
+query không có dấu.
+
 ## 5. Cập nhật danh mục — `PATCH /admin/categories/:id`
 
 ### 5a. Test edge — body rỗng
@@ -128,6 +133,12 @@ active.
 ### 6b. Test edge — filter theo `q`
 
 `GET /products?q=Aurora`. **Kỳ vọng:** `200`, đúng 2 sản phẩm (`Aurora X1`, `Aurora X1 Pro`).
+
+### 6b'. Test edge — `q` không dấu vẫn khớp tên có dấu tiếng Việt
+
+`GET /products?q=chuot khong day`. **Kỳ vọng:** `200`, đúng 1 sản phẩm `PK-004` (`Chuột không
+dây`) dù query không có dấu — xác nhận `unaccent` hoạt động đúng (trước PR09 phần này, query này
+trả về rỗng vì `ILIKE` phân biệt dấu).
 
 ### 6c. Test edge — filter theo khoảng giá
 
@@ -371,12 +382,14 @@ docs/testing/evidence/pr09/
 ├── 08-category-create-no-token-401.png
 ├── 09-admin-categories-list-200.png
 ├── 10-admin-categories-filter-q-200.png
+├── 10b-admin-categories-filter-q-unaccent-200.png
 ├── 11-category-patch-empty-body-400.png
 ├── 12-category-patch-not-found-404.png
 ├── 13-category-patch-200.png
 ├── 14-products-public-200-count14.png
 ├── 15-products-filter-category-200.png
 ├── 16-products-filter-q-200.png
+├── 16b-products-filter-q-unaccent-200.png
 ├── 17-products-filter-price-range-200.png
 ├── 18-products-featured-200.png
 ├── 19-products-minmax-invalid-400.png
