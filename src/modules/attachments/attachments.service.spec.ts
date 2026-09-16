@@ -162,6 +162,30 @@ describe('AttachmentsService', () => {
     });
   });
 
+  describe('findStorageKeyById', () => {
+    it('returns the storageKey of an existing attachment', async () => {
+      const findOne = jest.fn().mockResolvedValue({ storageKey: 'k.png' });
+      const manager = {
+        getRepository: jest.fn().mockReturnValue({ findOne }),
+      } as unknown as EntityManager;
+
+      await expect(
+        service.findStorageKeyById('attachment-1', manager),
+      ).resolves.toBe('k.png');
+    });
+
+    it('returns null when the attachment no longer exists', async () => {
+      const findOne = jest.fn().mockResolvedValue(null);
+      const manager = {
+        getRepository: jest.fn().mockReturnValue({ findOne }),
+      } as unknown as EntityManager;
+
+      await expect(
+        service.findStorageKeyById('missing-id', manager),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe('getVisibleAttachmentStream', () => {
     it('throws NotFoundException when no visible product currently uses this image', async () => {
       const builder = mockAttachmentQueryBuilder(productsRepository);

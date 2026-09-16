@@ -100,6 +100,18 @@ export class AttachmentsService {
     return attachment;
   }
 
+  /** Đọc `storageKey` của attachment cũ trước khi bị unlink DB — để caller dọn file sau commit. */
+  async findStorageKeyById(
+    id: string,
+    manager: EntityManager,
+  ): Promise<string | null> {
+    const attachment = await manager.getRepository(Attachment).findOne({
+      select: { storageKey: true },
+      where: { id },
+    });
+    return attachment?.storageKey ?? null;
+  }
+
   async deleteAttachmentRecord(
     id: string,
     manager: EntityManager,

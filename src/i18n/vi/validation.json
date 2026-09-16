@@ -27,5 +27,10 @@
   "IS_BOOLEAN": "Giá trị phải là boolean",
   "INVALID_BOOLEAN_STRING": "Giá trị chỉ được là \"true\" hoặc \"false\"",
   "MAX_LENGTH_SLUG": "Slug không được vượt quá 120 ký tự",
-  "INVALID_SLUG_FORMAT": "Slug chỉ được chứa chữ thường, số và dấu gạch ngang đơn giữa các từ"
+  "INVALID_SLUG_FORMAT": "Slug chỉ được chứa chữ thường, số và dấu gạch ngang đơn giữa các từ",
+  "MIN_LENGTH_SKU": "SKU không được để trống",
+  "MAX_LENGTH_SKU": "SKU không được vượt quá 64 ký tự",
+  "INVALID_PRICE_VND": "Giá trị phải là chuỗi số VND hợp lệ trong khoảng cho phép",
+  "MIN_STOCK": "Tồn kho không được âm",
+  "MAX_STOCK": "Tồn kho vượt quá giới hạn cho phép"
 }

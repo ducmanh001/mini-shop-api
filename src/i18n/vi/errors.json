@@ -17,5 +17,10 @@
   "categorySlugAlreadyTaken": "Slug này đã được sử dụng",
   "categoryInUse": "Danh mục này vẫn còn sản phẩm nên không thể xóa",
   "invalidImageFile": "File phải là ảnh JPEG, PNG hoặc WebP hợp lệ",
-  "attachmentNotFound": "Không tìm thấy file đính kèm"
+  "attachmentNotFound": "Không tìm thấy file đính kèm",
+  "productNotFound": "Không tìm thấy sản phẩm",
+  "categoryInactive": "Danh mục này đang ngừng hoạt động",
+  "productSkuAlreadyTaken": "SKU này đã được sử dụng",
+  "minPriceExceedsMaxPrice": "minPrice không được lớn hơn maxPrice",
+  "missingImageFile": "Cần có file đính kèm"
 }

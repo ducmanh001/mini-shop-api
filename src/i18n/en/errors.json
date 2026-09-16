@@ -17,5 +17,10 @@
   "categorySlugAlreadyTaken": "This slug is already taken",
   "categoryInUse": "This category still has products and cannot be deleted",
   "invalidImageFile": "File must be a genuine JPEG, PNG, or WebP image",
-  "attachmentNotFound": "Attachment not found"
+  "attachmentNotFound": "Attachment not found",
+  "productNotFound": "Product not found",
+  "categoryInactive": "This category is inactive",
+  "productSkuAlreadyTaken": "This SKU is already taken",
+  "minPriceExceedsMaxPrice": "minPrice must not exceed maxPrice",
+  "missingImageFile": "A file is required"
 }
