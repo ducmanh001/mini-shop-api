@@ -417,7 +417,7 @@ auth ──depends on──▶ users
 users ──depends on──▶ attachments
 categories ──depends on──▶ (module lá, không phụ thuộc module nghiệp vụ khác)
 products ──depends on──▶ categories, attachments
-cart ──depends on──▶ products (chỉ entity, qua TypeORM relation)
+cart ──depends on──▶ products (chỉ entity, qua TypeORM relation), users (chỉ entity, qua TypeORM relation — khóa row user trước khi ghi giỏ, database.md mục 6)
 orders ──depends on──▶ users, cart, products
 reviews ──depends on──▶ users, products, orders (chỉ EXISTS query, không import OrdersModule)
 chat ──depends on──▶ users
