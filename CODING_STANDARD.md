@@ -309,6 +309,28 @@ async saveFile(ownerType: AttachmentOwnerType, ownerId: string, file: Express.Mu
 
 **Lưu ý theo mentor:** xóa row attachment trong DB là bắt buộc trong transaction; xóa **file vật lý trên đĩa có thể để lại**, dọn dẹp sau bằng cron job hàng tháng — không cần chặn transaction chính vì thao tác I/O đĩa không rollback được (transaction DB chỉ bảo vệ được các bảng, không bảo vệ được filesystem).
 
+**Không dùng `Promise.all` cho nhiều query cùng dùng một `manager` transaction — một transaction chỉ có đúng một connection.** `dataSource.transaction(async (manager) => {...})` giữ đúng một connection Postgres cho tới commit/rollback; mọi `manager.getRepository(X)...` bên trong callback đều tuần tự hoá qua chính connection đó ở tầng driver. Gọi 2+ query qua `Promise.all` tưởng như chạy song song, nhưng thực chất chỉ dồn cả 2 lệnh cho `pg` xử lý — không có gì thật sự chạy đồng thời (khác với 2 HTTP call/2 connection riêng, nơi `Promise.all` có ích thật). Tệ hơn, driver `pg` (`node_modules/pg/lib/client.js`, hàm `queryQueueLengthDeprecationNotice`) tự in cảnh báo `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` — bug thật đã xảy ra ở PR12 (checkout): chạy `Promise.all([itemsRepo.save(...), historyRepo.save(...), notificationRepo.save(...)])` trong cùng transaction làm warning này xuất hiện trong log `test:e2e`; do `util.deprecate` chỉ in cảnh báo **một lần duy nhất mỗi process**, warning có thể "biến mất" ở lần chạy sau và dễ bị bỏ qua nếu không chú ý ngay từ lần đầu.
+
+**Sai (tưởng nhanh hơn, thực ra không, và dùng hành vi bị deprecate):**
+
+```typescript
+const [items, history] = await Promise.all([
+  itemRepository.save(itemsData.map((d) => itemRepository.create(d))),
+  historyRepository.save(historyRepository.create({ ... })),
+]);
+```
+
+**Đúng (tuần tự — cùng tốc độ thật, không cảnh báo, không phụ thuộc hành vi sắp bị loại bỏ):**
+
+```typescript
+const items = await itemRepository.save(itemsData.map((d) => itemRepository.create(d)));
+const history = await historyRepository.save(historyRepository.create({ ... }));
+```
+
+Khi nghiệp vụ cần ghi nhiều dòng cùng bảng với giá trị khác nhau mỗi dòng (vd trừ tồn nhiều product khác nhau trong 1 lần checkout) và không muốn N round-trip tuần tự, gộp thành **một UPDATE duy nhất** bằng `CASE WHEN id = :id0 THEN ... WHEN id = :id1 THEN ... END` cộng `WHERE (id = :id0 AND ...) OR (id = :id1 AND ...)` — giảm thật số round-trip (khác `Promise.all`, đây là gộp nhiều statement thành 1, không phải chạy nhiều statement "song song"), xem `OrdersService.decrementProductStock` (PR12).
+
+**Áp dụng:** trong bất kỳ callback `dataSource.transaction()`, không viết `Promise.all([...])` bọc quanh 2+ lệnh gọi `manager.getRepository(...)`/`manager.createQueryBuilder()...execute()` — chỉ dùng `Promise.all` cho việc thực sự độc lập ở tầng connection/IO khác (gọi service ngoài, 2 HTTP request...), không phải cho nhiều bước ghi/đọc chia sẻ cùng một transaction manager.
+
 ---
 
 ## 7. Error Handling — Bắt lỗi cụ thể, trả message rõ ràng
