@@ -34,5 +34,13 @@
   "MIN_STOCK": "Tồn kho không được âm",
   "MAX_STOCK": "Tồn kho vượt quá giới hạn cho phép",
   "MIN_QUANTITY": "Số lượng phải lớn hơn hoặc bằng 1",
-  "MAX_QUANTITY": "Số lượng vượt quá giới hạn cho phép"
+  "MAX_QUANTITY": "Số lượng vượt quá giới hạn cho phép",
+  "MIN_LENGTH_RECIPIENT_NAME": "Tên người nhận không được để trống",
+  "MAX_LENGTH_RECIPIENT_NAME": "Tên người nhận vượt quá độ dài cho phép",
+  "INVALID_PHONE_FORMAT": "Số điện thoại chỉ được chứa chữ số, có thể có dấu + ở đầu",
+  "MIN_LENGTH_PHONE": "Số điện thoại phải có ít nhất 8 ký tự",
+  "MAX_LENGTH_PHONE": "Số điện thoại không được vượt quá 20 ký tự",
+  "MIN_LENGTH_ADDRESS": "Địa chỉ không được để trống",
+  "MAX_LENGTH_ADDRESS": "Địa chỉ vượt quá độ dài cho phép",
+  "MAX_LENGTH_CUSTOMER_NOTE": "Ghi chú vượt quá độ dài cho phép"
 }

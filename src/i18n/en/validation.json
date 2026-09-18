@@ -34,5 +34,13 @@
   "MIN_STOCK": "Stock must not be negative",
   "MAX_STOCK": "Stock exceeds the allowed range",
   "MIN_QUANTITY": "Quantity must be at least 1",
-  "MAX_QUANTITY": "Quantity exceeds the allowed range"
+  "MAX_QUANTITY": "Quantity exceeds the allowed range",
+  "MIN_LENGTH_RECIPIENT_NAME": "Recipient name must not be empty",
+  "MAX_LENGTH_RECIPIENT_NAME": "Recipient name must not exceed the allowed length",
+  "INVALID_PHONE_FORMAT": "Phone must contain only digits, with an optional leading +",
+  "MIN_LENGTH_PHONE": "Phone must be at least 8 characters",
+  "MAX_LENGTH_PHONE": "Phone must not exceed 20 characters",
+  "MIN_LENGTH_ADDRESS": "Address must not be empty",
+  "MAX_LENGTH_ADDRESS": "Address must not exceed the allowed length",
+  "MAX_LENGTH_CUSTOMER_NOTE": "Customer note must not exceed the allowed length"
 }
