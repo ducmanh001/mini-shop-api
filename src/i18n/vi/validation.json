@@ -32,5 +32,7 @@
   "MAX_LENGTH_SKU": "SKU không được vượt quá 64 ký tự",
   "INVALID_PRICE_VND": "Giá trị phải là chuỗi số VND hợp lệ trong khoảng cho phép",
   "MIN_STOCK": "Tồn kho không được âm",
-  "MAX_STOCK": "Tồn kho vượt quá giới hạn cho phép"
+  "MAX_STOCK": "Tồn kho vượt quá giới hạn cho phép",
+  "MIN_QUANTITY": "Số lượng phải lớn hơn hoặc bằng 1",
+  "MAX_QUANTITY": "Số lượng vượt quá giới hạn cho phép"
 }

@@ -6,5 +6,7 @@
  * lại (mục 15).
  */
 export const MAX_LINE_ITEM_QUANTITY = 99;
+/** Cùng lý do dùng chung với `MAX_LINE_ITEM_QUANTITY` — cận dưới của cùng 1 bất biến. */
+export const MIN_LINE_ITEM_QUANTITY = 1;
 /** Rule ở tầng service (mục 4 database.md) — DB không CHECK được "tối đa N dòng/user". */
 export const MAX_CART_LINES_PER_USER = 20;

@@ -22,5 +22,7 @@
   "categoryInactive": "Danh mục này đang ngừng hoạt động",
   "productSkuAlreadyTaken": "SKU này đã được sử dụng",
   "minPriceExceedsMaxPrice": "minPrice không được lớn hơn maxPrice",
-  "missingImageFile": "Cần có file đính kèm"
+  "missingImageFile": "Cần có file đính kèm",
+  "cartInsufficientStock": "Không đủ tồn kho cho số lượng yêu cầu",
+  "cartLineLimitReached": "Giỏ hàng đã đạt số lượng sản phẩm khác nhau tối đa"
 }

@@ -22,5 +22,7 @@
   "categoryInactive": "This category is inactive",
   "productSkuAlreadyTaken": "This SKU is already taken",
   "minPriceExceedsMaxPrice": "minPrice must not exceed maxPrice",
-  "missingImageFile": "A file is required"
+  "missingImageFile": "A file is required",
+  "cartInsufficientStock": "Not enough stock for the requested quantity",
+  "cartLineLimitReached": "Cart already has the maximum number of different products"
 }
