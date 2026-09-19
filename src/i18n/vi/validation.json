@@ -42,5 +42,6 @@
   "MAX_LENGTH_PHONE": "Số điện thoại không được vượt quá 20 ký tự",
   "MIN_LENGTH_ADDRESS": "Địa chỉ không được để trống",
   "MAX_LENGTH_ADDRESS": "Địa chỉ vượt quá độ dài cho phép",
-  "MAX_LENGTH_CUSTOMER_NOTE": "Ghi chú vượt quá độ dài cho phép"
+  "MAX_LENGTH_CUSTOMER_NOTE": "Ghi chú vượt quá độ dài cho phép",
+  "INVALID_ORDER_REJECTION_REASON": "reason là bắt buộc (không được để trống, tối đa 500 ký tự) khi status là REJECTED, và không được gửi với các status khác"
 }

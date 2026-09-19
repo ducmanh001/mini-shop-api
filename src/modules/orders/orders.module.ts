@@ -4,6 +4,7 @@ import { CartModule } from '../cart/cart.module';
 import { EmailNotification } from '../notifications/entities/email-notification.entity';
 import { ProductsModule } from '../products/products.module';
 import { UsersModule } from '../users/users.module';
+import { AdminOrdersController } from './admin-orders.controller';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderItem } from './entities/order-item.entity';
@@ -22,7 +23,7 @@ import { Order } from './entities/order.entity';
     ProductsModule,
     CartModule,
   ],
-  controllers: [OrdersController],
+  controllers: [OrdersController, AdminOrdersController],
   providers: [OrdersService],
   exports: [TypeOrmModule],
 })

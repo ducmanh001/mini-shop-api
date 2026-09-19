@@ -14,8 +14,12 @@ import { Product } from '../products/entities/product.entity';
 import { EmailNotification } from '../notifications/entities/email-notification.entity';
 import { EmailNotificationEventType } from '../notifications/enums/email-notification-event-type.enum';
 import { User } from '../users/entities/user.entity';
+import { AdminListOrdersQueryDto } from './dto/admin-list-orders-query.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderResponseDto } from './dto/order-response.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { OrderResponseDto, OrdersResponseDto } from './dto/order-response.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { ADMIN_ORDER_TRANSITIONS } from './constants/orders.constants';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderStatusHistory } from './entities/order-status-history.entity';
 import { Order } from './entities/order.entity';
@@ -25,6 +29,8 @@ import { CheckoutResult } from './interfaces/checkout-result.interface';
 import { LockedCategoryForCheckout } from './interfaces/locked-category-for-checkout.interface';
 import { LockedProductForCheckout } from './interfaces/locked-product-for-checkout.interface';
 import { LockedUserForCheckout } from './interfaces/locked-user-for-checkout.interface';
+import { OrderHistorySource } from './interfaces/order-history-source.interface';
+import { OrderItemSource } from './interfaces/order-item-source.interface';
 
 @Injectable()
 export class OrdersService {
@@ -130,7 +136,12 @@ export class OrdersService {
       );
 
       await this.decrementProductStock(orderItemsData, manager);
-      await this.createOrderPlacedNotification(order.id, user.email, manager);
+      await this.createOrderNotification(
+        order.id,
+        user.email,
+        EmailNotificationEventType.ORDER_PLACED,
+        manager,
+      );
       await manager.getRepository(CartItem).delete({ userId });
 
       this.logger.log(`Customer ${userId} checked out order ${order.id}`);
@@ -138,6 +149,162 @@ export class OrdersService {
         order: OrderResponseDto.fromEntity(order, items, [history]),
         isNew: true,
       };
+    });
+  }
+
+  /** ORDER-02 — chỉ đơn của current user (api-requirements.csv), list summary không kéo items/history. */
+  async listForCustomer(
+    userId: string,
+    query: ListOrdersQueryDto,
+  ): Promise<OrdersResponseDto> {
+    const queryBuilder = this.buildOrderSummaryQuery(query).where(
+      'order.userId = :userId',
+      { userId },
+    );
+    if (query.status) {
+      queryBuilder.andWhere('order.status = :status', { status: query.status });
+    }
+    const [orders, ordersCount] = await queryBuilder.getManyAndCount();
+    return OrdersResponseDto.fromEntities(orders, ordersCount);
+  }
+
+  /** ORDER-03 — ownership qua `id` + `userId` trong cùng WHERE; đơn của user khác trả 404. */
+  async getDetailForCustomer(
+    userId: string,
+    orderId: string,
+  ): Promise<OrderResponseDto> {
+    return this.loadOrderResponse(orderId, { ownerUserId: userId });
+  }
+
+  /**
+   * ORDER-04 — chỉ chủ đơn, chỉ khi còn PENDING. Khoá order trước (lock tối thiểu cột cần), hoàn
+   * tồn đúng một lần nếu hợp lệ; không khoá user row ở luồng này, khác checkout (database.md mục 7).
+   */
+  async cancel(userId: string, orderId: string): Promise<OrderResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const order = await manager.getRepository(Order).findOne({
+        select: { id: true, status: true },
+        where: { id: orderId, userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order) {
+        throw new NotFoundException(this.i18n.t('errors.orderNotFound'));
+      }
+      if (order.status !== OrderStatus.PENDING) {
+        throw new ConflictException(
+          this.i18n.t('errors.invalidOrderTransition'),
+        );
+      }
+
+      await this.restoreOrderStock(orderId, manager);
+      await manager
+        .getRepository(Order)
+        .update(orderId, { status: OrderStatus.CANCELLED });
+      await this.appendHistory(
+        orderId,
+        OrderStatus.PENDING,
+        OrderStatus.CANCELLED,
+        userId,
+        null,
+        manager,
+      );
+
+      this.logger.log(`Customer ${userId} cancelled order ${orderId}`);
+      return this.loadOrderResponse(orderId, { manager });
+    });
+  }
+
+  /** ORDER-05 — thêm filter `userId` so với bản customer, không giới hạn theo chủ đơn. */
+  async listForAdmin(
+    query: AdminListOrdersQueryDto,
+  ): Promise<OrdersResponseDto> {
+    const queryBuilder = this.buildOrderSummaryQuery(query);
+    if (query.status) {
+      queryBuilder.andWhere('order.status = :status', { status: query.status });
+    }
+    if (query.userId) {
+      queryBuilder.andWhere('order.userId = :userId', { userId: query.userId });
+    }
+    const [orders, ordersCount] = await queryBuilder.getManyAndCount();
+    return OrdersResponseDto.fromEntities(orders, ordersCount);
+  }
+
+  /** ORDER-06 — admin xem bất kỳ đơn nào, không lọc theo chủ đơn. */
+  async getDetailForAdmin(orderId: string): Promise<OrderResponseDto> {
+    return this.loadOrderResponse(orderId);
+  }
+
+  /**
+   * ORDER-07 — admin confirm/reject/complete. Khoá order trước (không khoá user — database.md mục
+   * 7), validate cạnh chuyển bằng `ADMIN_ORDER_TRANSITIONS`, hoàn tồn đúng một lần khi REJECTED, tạo
+   * mail CONFIRMED/REJECTED (COMPLETED không có event_type mail tương ứng — database.md mục 4).
+   */
+  async updateStatusByAdmin(
+    orderId: string,
+    adminUserId: string,
+    dto: UpdateOrderStatusDto,
+  ): Promise<OrderResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const order = await manager.getRepository(Order).findOne({
+        select: { id: true, userId: true, status: true },
+        where: { id: orderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order) {
+        throw new NotFoundException(this.i18n.t('errors.orderNotFound'));
+      }
+
+      const allowedTargets = ADMIN_ORDER_TRANSITIONS[order.status] ?? [];
+      if (!allowedTargets.includes(dto.status)) {
+        throw new ConflictException(
+          this.i18n.t('errors.invalidOrderTransition'),
+        );
+      }
+
+      const isRejected = dto.status === OrderStatus.REJECTED;
+      const rejectionReason = isRejected ? (dto.reason ?? '').trim() : null;
+      if (isRejected) {
+        await this.restoreOrderStock(orderId, manager);
+      }
+
+      await manager.getRepository(Order).update(orderId, {
+        status: dto.status,
+        ...(isRejected && { rejectionReason }),
+        ...(dto.status === OrderStatus.COMPLETED && {
+          completedAt: new Date(),
+        }),
+      });
+      await this.appendHistory(
+        orderId,
+        order.status,
+        dto.status,
+        adminUserId,
+        rejectionReason,
+        manager,
+      );
+
+      if (dto.status === OrderStatus.CONFIRMED || isRejected) {
+        const customer = await manager.getRepository(User).findOne({
+          select: { email: true },
+          where: { id: order.userId },
+        });
+        if (!customer) {
+          throw new NotFoundException(this.i18n.t('errors.userNotFound'));
+        }
+        await this.createOrderNotification(
+          orderId,
+          customer.email,
+          isRejected
+            ? EmailNotificationEventType.ORDER_REJECTED
+            : EmailNotificationEventType.ORDER_CONFIRMED,
+          manager,
+        );
+      }
+
+      this.logger.log(
+        `Admin ${adminUserId} moved order ${orderId} to ${dto.status}`,
+      );
+      return this.loadOrderResponse(orderId, { manager });
     });
   }
 
@@ -195,30 +362,8 @@ export class OrdersService {
 
     // Tuần tự, không Promise.all: cùng 1 connection của transaction manager — gọi client.query()
     // chồng lên nhau trên cùng connection bị pg deprecate (xem lý do đầy đủ ở decrementProductStock).
-    const items = await manager.getRepository(OrderItem).find({
-      select: {
-        id: true,
-        productId: true,
-        productNameSnapshot: true,
-        unitPriceVnd: true,
-        quantity: true,
-        lineTotalVnd: true,
-      },
-      where: { orderId: existingOrder.id },
-      order: { createdAt: 'ASC' },
-    });
-    const history = await manager.getRepository(OrderStatusHistory).find({
-      select: {
-        id: true,
-        fromStatus: true,
-        toStatus: true,
-        actorUserId: true,
-        reason: true,
-        createdAt: true,
-      },
-      where: { orderId: existingOrder.id },
-      order: { createdAt: 'ASC', id: 'ASC' },
-    });
+    const items = await this.fetchOrderItems(existingOrder.id, manager);
+    const history = await this.fetchOrderHistory(existingOrder.id, manager);
     return OrderResponseDto.fromEntity(existingOrder, items, history);
   }
 
@@ -344,19 +489,188 @@ export class OrdersService {
     }
   }
 
-  private async createOrderPlacedNotification(
+  private async createOrderNotification(
     orderId: string,
     recipientEmail: string,
+    eventType: EmailNotificationEventType,
     manager: EntityManager,
   ): Promise<void> {
     const notificationRepository = manager.getRepository(EmailNotification);
     await notificationRepository.save(
       notificationRepository.create({
         orderId,
-        eventType: EmailNotificationEventType.ORDER_PLACED,
+        eventType,
         recipientEmail,
         locale: this.resolveLocale(),
         payload: { templateVersion: 1 },
+      }),
+    );
+  }
+
+  /** Cột summary dùng chung cho `GET /orders` và `GET /admin/orders` (api-contract.md dòng 374). */
+  private buildOrderSummaryQuery(query: { limit: number; offset: number }) {
+    return this.dataSource
+      .getRepository(Order)
+      .createQueryBuilder('order')
+      .select([
+        'order.id',
+        'order.userId',
+        'order.status',
+        'order.paymentMethod',
+        'order.totalVnd',
+        'order.createdAt',
+        'order.updatedAt',
+      ])
+      .orderBy('order.createdAt', 'DESC')
+      .addOrderBy('order.id', 'DESC')
+      .take(query.limit)
+      .skip(query.offset);
+  }
+
+  /**
+   * Dựng `OrderResponse` đầy đủ (order + items + history) — dùng cho cả 2 GET detail (không có
+   * `manager`, đọc thẳng qua `dataSource`) lẫn bước trả response cuối của `cancel`/
+   * `updateStatusByAdmin` (có `manager`, đọc trong cùng transaction vừa ghi — mục 6 CODING_STANDARD.md).
+   */
+  private async loadOrderResponse(
+    orderId: string,
+    options: { ownerUserId?: string; manager?: EntityManager } = {},
+  ): Promise<OrderResponseDto> {
+    const { ownerUserId, manager } = options;
+    const ordersRepository = manager
+      ? manager.getRepository(Order)
+      : this.dataSource.getRepository(Order);
+    const order = await ordersRepository.findOne({
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        paymentMethod: true,
+        recipientName: true,
+        phone: true,
+        addressSnapshot: true,
+        customerNote: true,
+        totalVnd: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      where: ownerUserId
+        ? { id: orderId, userId: ownerUserId }
+        : { id: orderId },
+    });
+    if (!order) {
+      throw new NotFoundException(this.i18n.t('errors.orderNotFound'));
+    }
+    const items = await this.fetchOrderItems(orderId, manager);
+    const history = await this.fetchOrderHistory(orderId, manager);
+    return OrderResponseDto.fromEntity(order, items, history);
+  }
+
+  /** Dùng cho `findReplay` (trong transaction) và `loadOrderResponse` (có hoặc không có transaction). */
+  private async fetchOrderItems(
+    orderId: string,
+    manager?: EntityManager,
+  ): Promise<OrderItemSource[]> {
+    const repository = manager
+      ? manager.getRepository(OrderItem)
+      : this.dataSource.getRepository(OrderItem);
+    return repository.find({
+      select: {
+        id: true,
+        productId: true,
+        productNameSnapshot: true,
+        unitPriceVnd: true,
+        quantity: true,
+        lineTotalVnd: true,
+      },
+      where: { orderId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /** Dùng cho `findReplay` (trong transaction) và `loadOrderResponse` (có hoặc không có transaction). */
+  private async fetchOrderHistory(
+    orderId: string,
+    manager?: EntityManager,
+  ): Promise<OrderHistorySource[]> {
+    const repository = manager
+      ? manager.getRepository(OrderStatusHistory)
+      : this.dataSource.getRepository(OrderStatusHistory);
+    return repository.find({
+      select: {
+        id: true,
+        fromStatus: true,
+        toStatus: true,
+        actorUserId: true,
+        reason: true,
+        createdAt: true,
+      },
+      where: { orderId },
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+  }
+
+  /** Hoàn tồn cho toàn bộ dòng hàng của 1 đơn — dùng chung bởi `cancel` (CUSTOMER) và REJECTED (ADMIN). */
+  private async restoreOrderStock(
+    orderId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    const items = await this.fetchOrderItems(orderId, manager);
+    const productIds = [...new Set(items.map((item) => item.productId))].sort();
+    await this.lockProducts(productIds, manager);
+    await this.restockProductStock(items, manager);
+  }
+
+  /**
+   * Ngược chiều `decrementProductStock` — cộng tồn theo CASE trong 1 UPDATE duy nhất, không lặp N
+   * round-trip/`Promise.all` (mục 6 CODING_STANDARD.md). Không kiểm `affected === items.length` như
+   * decrement: cộng tồn không có điều kiện nghiệp vụ nào khiến nó "thất bại" hợp lệ (product không
+   * bị hard-delete — database.md mục 4), khác chiều trừ tồn vốn có thể hết hàng thật.
+   */
+  private async restockProductStock(
+    items: readonly Pick<OrderItemSource, 'productId' | 'quantity'>[],
+    manager: EntityManager,
+  ): Promise<void> {
+    const stockCases = items
+      .map(
+        (_, index) =>
+          `WHEN id = :productId${index} THEN stock + :quantity${index}`,
+      )
+      .join(' ');
+    const idConditions = items
+      .map((_, index) => `id = :productId${index}`)
+      .join(' OR ');
+    const parameters: Record<string, string | number> = {};
+    items.forEach((item, index) => {
+      parameters[`productId${index}`] = item.productId;
+      parameters[`quantity${index}`] = item.quantity;
+    });
+
+    await manager
+      .getRepository(Product)
+      .createQueryBuilder()
+      .update(Product)
+      .set({ stock: () => `CASE ${stockCases} END` })
+      .where(idConditions, parameters)
+      .execute();
+  }
+
+  private async appendHistory(
+    orderId: string,
+    fromStatus: OrderStatus,
+    toStatus: OrderStatus,
+    actorUserId: string,
+    reason: string | null,
+    manager: EntityManager,
+  ): Promise<void> {
+    const historyRepository = manager.getRepository(OrderStatusHistory);
+    await historyRepository.save(
+      historyRepository.create({
+        orderId,
+        fromStatus,
+        toStatus,
+        actorUserId,
+        reason,
       }),
     );
   }

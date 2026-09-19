@@ -1,9 +1,13 @@
 import {
   Body,
   Controller,
+  Get,
+  HttpCode,
   HttpStatus,
+  Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -25,7 +29,8 @@ import { UserRole } from '../../common/enums/user-role.enum';
 import { IDEMPOTENCY_KEY_HEADER } from './constants/orders.constants';
 import { IdempotencyKey } from './decorators/idempotency-key.decorator';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderResponseDto } from './dto/order-response.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { OrderResponseDto, OrdersResponseDto } from './dto/order-response.dto';
 import { OrdersService } from './orders.service';
 
 /** ORDER-01 (PR12) — checkout COD của chính customer đang đăng nhập (api-contract.md dòng 35). */
@@ -87,5 +92,76 @@ export class OrdersController {
     res.status(isNew ? HttpStatus.CREATED : HttpStatus.OK);
     res.location(`${req.path}/${orderResponse.order.id}`);
     return orderResponse;
+  }
+
+  /** ORDER-02 (PR13) — lịch sử đơn của chính customer đang đăng nhập. */
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List the current customer orders' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid token',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Authenticated but not a CUSTOMER',
+  })
+  async list(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query() query: ListOrdersQueryDto,
+  ): Promise<OrdersResponseDto> {
+    return this.ordersService.listForCustomer(currentUser.id, query);
+  }
+
+  /** ORDER-03 (PR13) — chi tiết + trạng thái đơn; đơn của user khác trả 404 (api-contract.md dòng 15). */
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get an order owned by the current customer' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid token',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Authenticated but not a CUSTOMER',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Order not found or not owned by the current customer',
+  })
+  async getById(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.getDetailForCustomer(currentUser.id, id);
+  }
+
+  /** ORDER-04 (PR13) — chỉ chủ đơn, chỉ khi còn PENDING; hoàn tồn đúng một lần (api-contract.md dòng 449). */
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel a PENDING order owned by the current customer',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid token',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Authenticated but not a CUSTOMER',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Order not found or not owned by the current customer',
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Order is no longer PENDING',
+  })
+  async cancel(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.cancel(currentUser.id, id);
   }
 }
