@@ -120,7 +120,11 @@ describe('ProductsService', () => {
       deleteAttachmentRecord: jest.fn(),
       findStorageKeyById: jest.fn(),
     };
-    config = { getOrThrow: jest.fn().mockReturnValue('api/v1') };
+    config = {
+      getOrThrow: jest.fn((key: string) =>
+        key === 'PUBLIC_WEB_URL' ? 'http://localhost:3001' : 'api/v1',
+      ),
+    };
     i18n = { t: jest.fn((key: string) => key) };
 
     managerProductRepository = {
@@ -261,6 +265,38 @@ describe('ProductsService', () => {
       const result = await service.getPublicProductDetail('product-1');
 
       expect(result.product.id).toBe('product-1');
+    });
+  });
+
+  describe('getShareLinks', () => {
+    it('throws NotFoundException when not visible or missing', async () => {
+      const builder = mockQueryBuilder();
+      builder.getOne.mockResolvedValue(null);
+      productsRepository.createQueryBuilder.mockReturnValue(builder);
+
+      await expect(service.getShareLinks('missing-id')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('builds the canonical URL from PUBLIC_WEB_URL and encodes the name into share URLs', async () => {
+      const builder = mockQueryBuilder();
+      builder.getOne.mockResolvedValue(
+        sampleProduct({ id: 'product-1', name: 'Sổ tay & bút' }),
+      );
+      productsRepository.createQueryBuilder.mockReturnValue(builder);
+
+      const result = await service.getShareLinks('product-1');
+
+      expect(result.canonicalUrl).toBe(
+        'http://localhost:3001/products/product-1',
+      );
+      expect(result.facebookUrl).toBe(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(result.canonicalUrl)}`,
+      );
+      expect(result.xUrl).toBe(
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(result.canonicalUrl)}&text=${encodeURIComponent('Sổ tay & bút')}`,
+      );
     });
   });
 

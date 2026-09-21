@@ -234,6 +234,47 @@ describe('Products (e2e)', () => {
     });
   });
 
+  describe('GET /products/:id/share-links', () => {
+    it('rejects a malformed id with 400', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/products/not-a-uuid/share-links')
+        .expect(400);
+    });
+
+    it('returns 404 for an unknown or invisible product', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/products/${randomUUID()}/share-links`)
+        .expect(404);
+    });
+
+    it('returns the canonical URL and Facebook/X share links, no auth required', async () => {
+      const adminToken = await loginAs(SEED_BOB_EMAIL);
+      const category = await createCategoryAsAdmin(adminToken);
+      const product = await createProductAsAdmin(adminToken, category.id, {
+        name: 'Sổ tay & bút',
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/products/${product.id}/share-links`)
+        .expect(200);
+
+      const body = response.body as {
+        canonicalUrl: string;
+        facebookUrl: string;
+        xUrl: string;
+      };
+      expect(body.canonicalUrl).toBe(
+        `http://localhost:3002/products/${product.id}`,
+      );
+      expect(body.facebookUrl).toBe(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(body.canonicalUrl)}`,
+      );
+      expect(body.xUrl).toBe(
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(body.canonicalUrl)}&text=${encodeURIComponent('Sổ tay & bút')}`,
+      );
+    });
+  });
+
   describe('GET /admin/products', () => {
     it('rejects a request without a token with 401', async () => {
       await request(app.getHttpServer())

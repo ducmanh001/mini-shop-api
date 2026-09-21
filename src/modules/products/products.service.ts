@@ -20,6 +20,11 @@ import { AttachmentsService } from '../attachments/attachments.service';
 import { ATTACHMENT_ROUTE_PATH } from '../attachments/constants/attachments.constants';
 import { AttachmentMimeType } from '../attachments/interfaces/attachment-mime-type.type';
 import { Category } from '../categories/entities/category.entity';
+import {
+  FACEBOOK_SHARE_BASE_URL,
+  PRODUCTS_ROUTE_PATH,
+  X_SHARE_BASE_URL,
+} from './constants/products.constants';
 import { AdminListProductsQueryDto } from './dto/admin-list-products-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsQueryDto } from './dto/list-products-query.dto';
@@ -28,6 +33,7 @@ import {
   ProductResponseDto,
   ProductsResponseDto,
 } from './dto/product-response.dto';
+import { ShareLinksResponseDto } from './dto/share-links-response.dto';
 import { Product } from './entities/product.entity';
 import { CategoryDisplayFields } from './interfaces/category-display-fields.interface';
 
@@ -78,6 +84,35 @@ export class ProductsService {
       throw new NotFoundException(this.i18n.t('errors.productNotFound'));
     }
     return ProductResponseDto.fromEntity(product, this.attachmentsBasePath);
+  }
+
+  /**
+   * `GET /products/:id/share-links` — cùng rule visibility với product detail (api-contract.md dòng
+   * 492). Chỉ select id/name (không cần description/price/stock/image) — không dùng
+   * `baseProductListQuery()` vì nó kéo nhiều cột không dùng tới ở đây.
+   */
+  async getShareLinks(id: string): Promise<ShareLinksResponseDto> {
+    const product = await this.productsRepository
+      .createQueryBuilder('product')
+      .innerJoin('product.category', 'category')
+      .select(['product.id', 'product.name'])
+      .where('product.id = :id', { id })
+      .andWhere('product.isActive = true')
+      .andWhere('category.isActive = true')
+      .getOne();
+    if (!product) {
+      throw new NotFoundException(this.i18n.t('errors.productNotFound'));
+    }
+
+    const canonicalUrl = `${this.config.getOrThrow<string>('PUBLIC_WEB_URL')}/${PRODUCTS_ROUTE_PATH}/${product.id}`;
+    const encodedUrl = encodeURIComponent(canonicalUrl);
+    const encodedTitle = encodeURIComponent(product.name);
+
+    const dto = new ShareLinksResponseDto();
+    dto.canonicalUrl = canonicalUrl;
+    dto.facebookUrl = `${FACEBOOK_SHARE_BASE_URL}?u=${encodedUrl}`;
+    dto.xUrl = `${X_SHARE_BASE_URL}?url=${encodedUrl}&text=${encodedTitle}`;
+    return dto;
   }
 
   /** `GET /admin/products` — thấy cả product/category inactive, filter `isActive` tùy chọn. */

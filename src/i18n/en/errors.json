@@ -30,5 +30,8 @@
   "checkoutInsufficientStock": "One or more products do not have enough stock for this order",
   "checkoutIdempotencyKeyConflict": "This Idempotency-Key was already used with different order details",
   "orderNotFound": "Order not found",
-  "invalidOrderTransition": "This order cannot be moved to the requested status"
+  "invalidOrderTransition": "This order cannot be moved to the requested status",
+  "suggestionNotFound": "Product suggestion not found",
+  "duplicatePendingSuggestion": "You already have a pending suggestion with this name",
+  "invalidSuggestionTransition": "This suggestion is no longer PENDING and cannot be reviewed"
 }

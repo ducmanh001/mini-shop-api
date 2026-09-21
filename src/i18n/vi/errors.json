@@ -30,5 +30,8 @@
   "checkoutInsufficientStock": "Sản phẩm không đủ tồn kho để đặt hàng.",
   "checkoutIdempotencyKeyConflict": "Idempotency-Key này đã được dùng với nội dung đơn hàng khác",
   "orderNotFound": "Không tìm thấy đơn hàng",
-  "invalidOrderTransition": "Không thể chuyển đơn hàng này sang trạng thái yêu cầu"
+  "invalidOrderTransition": "Không thể chuyển đơn hàng này sang trạng thái yêu cầu",
+  "suggestionNotFound": "Không tìm thấy gợi ý sản phẩm",
+  "duplicatePendingSuggestion": "Bạn đã có một gợi ý đang chờ duyệt với tên này",
+  "invalidSuggestionTransition": "Gợi ý này không còn ở trạng thái PENDING nên không thể review"
 }
