@@ -42,5 +42,6 @@
   "MAX_LENGTH_PHONE": "Phone must not exceed 20 characters",
   "MIN_LENGTH_ADDRESS": "Address must not be empty",
   "MAX_LENGTH_ADDRESS": "Address must not exceed the allowed length",
-  "MAX_LENGTH_CUSTOMER_NOTE": "Customer note must not exceed the allowed length"
+  "MAX_LENGTH_CUSTOMER_NOTE": "Customer note must not exceed the allowed length",
+  "INVALID_ORDER_REJECTION_REASON": "reason is required (non-blank, max 500 characters) when status is REJECTED, and must not be sent for other statuses"
 }

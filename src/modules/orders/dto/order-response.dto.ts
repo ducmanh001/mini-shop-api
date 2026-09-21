@@ -3,6 +3,7 @@ import { Order } from '../entities/order.entity';
 import { OrderStatus } from '../enums/order-status.enum';
 import { OrderHistorySource } from '../interfaces/order-history-source.interface';
 import { OrderItemSource } from '../interfaces/order-item-source.interface';
+import { OrderSummarySource } from '../interfaces/order-summary-source.interface';
 
 /** `items` trong `OrderResponse` — snapshot bất biến, không có SKU (api-contract.md dòng 348). */
 export class OrderItemFields {
@@ -135,6 +136,61 @@ export class OrderResponseDto {
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };
+    return dto;
+  }
+}
+
+/** Một dòng trong `GET /orders`/`GET /admin/orders` — không kéo items/history/address (api-contract.md dòng 374). */
+export class OrderSummaryFields {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty({ enum: OrderStatus })
+  status: OrderStatus;
+
+  @ApiProperty()
+  paymentMethod: string;
+
+  @ApiProperty()
+  totalVnd: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+
+  static fromEntity(order: OrderSummarySource): OrderSummaryFields {
+    const fields = new OrderSummaryFields();
+    fields.id = order.id;
+    fields.userId = order.userId;
+    fields.status = order.status;
+    fields.paymentMethod = order.paymentMethod;
+    fields.totalVnd = order.totalVnd;
+    fields.createdAt = order.createdAt;
+    fields.updatedAt = order.updatedAt;
+    return fields;
+  }
+}
+
+/** `GET /orders` (ORDER-02) và `GET /admin/orders` (ORDER-05) — api-contract.md `OrdersResponse`. */
+export class OrdersResponseDto {
+  @ApiProperty({ type: [OrderSummaryFields] })
+  orders: OrderSummaryFields[];
+
+  @ApiProperty()
+  ordersCount: number;
+
+  static fromEntities(
+    orders: OrderSummarySource[],
+    ordersCount: number,
+  ): OrdersResponseDto {
+    const dto = new OrdersResponseDto();
+    dto.orders = orders.map((order) => OrderSummaryFields.fromEntity(order));
+    dto.ordersCount = ordersCount;
     return dto;
   }
 }

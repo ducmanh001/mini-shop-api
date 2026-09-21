@@ -28,5 +28,7 @@
   "checkoutCartEmpty": "Your cart is empty",
   "checkoutProductUnavailable": "One or more products in your cart are no longer available",
   "checkoutInsufficientStock": "One or more products do not have enough stock for this order",
-  "checkoutIdempotencyKeyConflict": "This Idempotency-Key was already used with different order details"
+  "checkoutIdempotencyKeyConflict": "This Idempotency-Key was already used with different order details",
+  "orderNotFound": "Order not found",
+  "invalidOrderTransition": "This order cannot be moved to the requested status"
 }
