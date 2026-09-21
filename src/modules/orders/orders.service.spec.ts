@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { DataSource, EntityManager } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
@@ -304,7 +308,7 @@ describe('OrdersService', () => {
       '11111111-1111-4111-8111-111111111111',
     );
 
-    expect(result.isNew).toBe(true);
+    expect(result.statusCode).toBe(HttpStatus.CREATED);
     expect(result.order.order.id).toBe('order-1');
     expect(result.order.order.totalVnd).toBe('200000');
     expect(managerOrderRepository.save).toHaveBeenCalledWith(
@@ -455,7 +459,7 @@ describe('OrdersService', () => {
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
 
-    it('returns the existing order with isNew=false when the hash matches, without touching the cart', async () => {
+    it('returns the existing order with statusCode=OK when the hash matches, without touching the cart', async () => {
       managerOrderRepository.findOne.mockResolvedValue(existingOrder);
       jest
         .spyOn(
@@ -470,7 +474,7 @@ describe('OrdersService', () => {
         '11111111-1111-4111-8111-111111111111',
       );
 
-      expect(result.isNew).toBe(false);
+      expect(result.statusCode).toBe(HttpStatus.OK);
       expect(result.order.order.id).toBe('order-1');
       expect(managerCartItemRepository.find).not.toHaveBeenCalled();
       expect(managerCartItemRepository.delete).not.toHaveBeenCalled();

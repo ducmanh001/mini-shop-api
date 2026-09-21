@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -65,7 +66,7 @@ export class OrdersService {
         manager,
       );
       if (replay) {
-        return { order: replay, isNew: false };
+        return { order: replay, statusCode: HttpStatus.OK };
       }
 
       const cartItems = await manager.getRepository(CartItem).find({
@@ -136,7 +137,7 @@ export class OrdersService {
       this.logger.log(`Customer ${userId} checked out order ${order.id}`);
       return {
         order: OrderResponseDto.fromEntity(order, items, [history]),
-        isNew: true,
+        statusCode: HttpStatus.CREATED,
       };
     });
   }

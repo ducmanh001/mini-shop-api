@@ -79,12 +79,9 @@ export class OrdersController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<OrderResponseDto> {
-    const { order: orderResponse, isNew } = await this.ordersService.checkout(
-      currentUser.id,
-      dto,
-      idempotencyKey,
-    );
-    res.status(isNew ? HttpStatus.CREATED : HttpStatus.OK);
+    const { order: orderResponse, statusCode } =
+      await this.ordersService.checkout(currentUser.id, dto, idempotencyKey);
+    res.status(statusCode);
     res.location(`${req.path}/${orderResponse.order.id}`);
     return orderResponse;
   }
