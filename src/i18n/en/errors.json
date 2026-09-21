@@ -24,5 +24,9 @@
   "minPriceExceedsMaxPrice": "minPrice must not exceed maxPrice",
   "missingImageFile": "A file is required",
   "cartInsufficientStock": "Not enough stock for the requested quantity",
-  "cartLineLimitReached": "Cart already has the maximum number of different products"
+  "cartLineLimitReached": "Cart already has the maximum number of different products",
+  "checkoutCartEmpty": "Your cart is empty",
+  "checkoutProductUnavailable": "One or more products in your cart are no longer available",
+  "checkoutInsufficientStock": "One or more products do not have enough stock for this order",
+  "checkoutIdempotencyKeyConflict": "This Idempotency-Key was already used with different order details"
 }

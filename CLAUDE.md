@@ -15,6 +15,7 @@ NestJS + TypeORM + PostgreSQL ecommerce backend, làm trong mock project có men
 - **Transaction nhiều bước phải truyền `manager` xuyên suốt mọi Repository/service call bên trong** — `dataSource.transaction()` không tự động bảo vệ nếu code trong callback dùng Repository inject mặc định thay vì `manager` (mục 6, đã từng là bug thật).
 - **Đọc-rồi-ghi trên 1 row có thể bị nhiều request đua** (tồn kho, đổi trạng thái đơn, mở conversation) dùng atomic UPDATE hoặc `pessimistic_write` lock, không chỉ bọc transaction (mục 22).
 - **Interface dùng ở service/controller tách file riêng** trong `interfaces/`, kể cả khi có lý do hợp lý để khai inline (vd tránh import cycle) — reviewer thật không chấp nhận ngoại lệ này, giải quyết cycle bằng cách khác.
+- **Không `Promise.all` cho nhiều query cùng dùng một `manager` transaction** — một transaction chỉ có đúng một connection nên không có gì chạy song song thật; `pg` còn deprecate hành vi này (mục 6 CODING_STANDARD.md, bug thật ở PR12 checkout). Cần giảm round-trip cho N dòng cùng bảng thì gộp thành 1 UPDATE bằng `CASE`, không lặp N query.
 
 ## Git
 

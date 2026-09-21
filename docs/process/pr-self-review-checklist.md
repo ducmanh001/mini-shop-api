@@ -39,6 +39,7 @@ Nguồn: [nestjs-mock-project#7](https://github.com/thaind-2785/nestjs-mock-proj
 - [ ] 🔴 Nhiều lock lồng nhau trong 1 transaction dùng đúng thứ tự lock cố định, tránh deadlock — áp dụng cho mọi transaction đa lock, không chỉ checkout (mục 22, nguồn: #9).
 - [ ] Đọc-rồi-ghi trên 1 row có thể bị nhiều request đua (tồn kho, đổi trạng thái đơn, mở conversation) dùng atomic UPDATE hoặc `pessimistic_write`, không chỉ transaction (mục 22).
 - [ ] `lock: { mode: 'pessimistic_write' }` không dùng chung `relations`/join khi cột phía kia nullable — Postgres cấm `FOR UPDATE` trên vế NULL-able của outer join; nạp quan hệ (category, image...) bằng query riêng, không lock, sau khi ghi xong (mục 22, nguồn: PR09 `products.service.ts`).
+- [ ] Không `Promise.all` bọc quanh 2+ lệnh `manager.getRepository(...)`/`manager.createQueryBuilder()` cùng một `dataSource.transaction()` — một transaction chỉ có đúng 1 connection nên không chạy song song thật, và `pg` deprecate hành vi gọi `client.query()` chồng lên nhau trên cùng connection (loại bỏ ở pg@9). Muốn giảm round-trip cho N dòng cùng bảng thì gộp 1 UPDATE bằng `CASE`, không lặp N query tuần tự cũng không bọc `Promise.all` (mục 6, nguồn: PR12 `orders.service.ts`).
 
 ### Code Structure
 

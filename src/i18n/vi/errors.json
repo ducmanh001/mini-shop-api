@@ -24,5 +24,9 @@
   "minPriceExceedsMaxPrice": "minPrice không được lớn hơn maxPrice",
   "missingImageFile": "Cần có file đính kèm",
   "cartInsufficientStock": "Không đủ tồn kho cho số lượng yêu cầu",
-  "cartLineLimitReached": "Giỏ hàng đã đạt số lượng sản phẩm khác nhau tối đa"
+  "cartLineLimitReached": "Giỏ hàng đã đạt số lượng sản phẩm khác nhau tối đa",
+  "checkoutCartEmpty": "Giỏ hàng đang trống",
+  "checkoutProductUnavailable": "Một hoặc nhiều sản phẩm trong giỏ hiện không khả dụng",
+  "checkoutInsufficientStock": "Sản phẩm không đủ tồn kho để đặt hàng.",
+  "checkoutIdempotencyKeyConflict": "Idempotency-Key này đã được dùng với nội dung đơn hàng khác"
 }
