@@ -19,7 +19,7 @@ Phạm vi: `POST /chat/conversations`, `GET /chat/conversations/me`, `GET
 1. `docker compose up -d` (nếu chưa chạy) — kiểm tra container `postgres` `healthy`: `docker ps`.
 2. Có file `.env` ở root repo (copy từ `.env.example`, điền `JWT_SECRET`/`NOTIFICATION_SECRET_KEY`
    như PR06). PR15 có 1 migration mới (`AddChatMessageRequestHashCheck`) — chạy `npm run
-   migration:run` trước khi seed.
+migration:run` trước khi seed.
 3. `npm run seed -- --profile=demo` — tạo/giữ nguyên (idempotent) 1 admin (`admin@mini-shop.example.com`)
    và 2 customer (`customer1@mini-shop.example.com`, `customer2@mini-shop.example.com`), cùng mật
    khẩu demo `Demo@12345`. Seed chỉ có **đúng 1 admin** — mục 6 dùng chính admin này làm người được
@@ -112,8 +112,8 @@ Authorize JWT_CUSTOMER2. `POST /chat/conversations/{CONV1_ID}/messages`, header 
 Authorize → Logout, gọi `POST /chat/conversations/{CONV1_ID}/messages`. **Kỳ vọng:** `401`.
 Authorize lại JWT_CUSTOMER1.
 
-*(Case "gửi vào conversation đã CLOSED → 409" cần admin đóng conversation trước — xem mục 6b, làm
-ngay sau khi đóng CONV1_ID ở đó, không làm ở mục này.)*
+_(Case "gửi vào conversation đã CLOSED → 409" cần admin đóng conversation trước — xem mục 6b, làm
+ngay sau khi đóng CONV1_ID ở đó, không làm ở mục này.)_
 
 ## 4. Xem lịch sử tin nhắn (cursor) — `GET /chat/conversations/:id/messages`
 
