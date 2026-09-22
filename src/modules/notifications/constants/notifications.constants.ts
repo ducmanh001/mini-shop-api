@@ -37,3 +37,12 @@ export const ORDER_MAIL_KEY: Partial<
   [EmailNotificationEventType.ORDER_CONFIRMED]: 'orderConfirmed',
   [EmailNotificationEventType.ORDER_REJECTED]: 'orderRejected',
 };
+
+export const MONTHLY_REVENUE_MAIL_KEY = 'monthlyRevenue';
+
+/**
+ * 6 field (giây phút giờ ngày-tháng tháng thứ-trong-tuần) — cùng định dạng `CronExpression` của
+ * `@nestjs/schedule` dùng (vd `EVERY_DAY_AT_MIDNIGHT = '0 0 0 * * *'`), không có preset dựng sẵn cho
+ * "00:10 ngày đầu mỗi tháng" nên khai riêng. api-contract.md mục "Statistics và monthly revenue".
+ */
+export const MONTHLY_REPORT_CRON_EXPRESSION = '0 10 0 1 * *';

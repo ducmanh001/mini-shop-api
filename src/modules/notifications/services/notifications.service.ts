@@ -40,6 +40,7 @@ export class NotificationsService {
         locale: true,
         payload: true,
         secretCiphertext: true,
+        reportPeriod: true,
         order: {
           id: true,
           recipientName: true,

@@ -7,11 +7,13 @@ import { NOTIFICATION_SECRET_KEY_PROVIDER } from '../../../notification-secret/n
 import { AuthTokenMailPayload } from '../../auth/interfaces/auth-token-mail-payload.interface';
 import {
   AUTH_TOKEN_LINK_PATH,
+  MONTHLY_REVENUE_MAIL_KEY,
   ORDER_MAIL_KEY,
 } from '../constants/notifications.constants';
 import { EmailNotificationEventType } from '../enums/email-notification-event-type.enum';
 import { EmailNotification } from '../entities/email-notification.entity';
 import { MailContent } from '../interfaces/mail-content.interface';
+import { MonthlyRevenueMailPayload } from '../interfaces/monthly-revenue-mail-payload.interface';
 
 /** Tách khỏi `MailerService` để test được logic dựng nội dung mà không cần mock SMTP transport. */
 @Injectable()
@@ -33,9 +35,7 @@ export class MailContentBuilderService {
       case EmailNotificationEventType.ORDER_REJECTED:
         return this.buildOrderContent(notification);
       case EmailNotificationEventType.MONTHLY_REVENUE:
-        throw new Error(
-          `MONTHLY_REVENUE email content is not implemented yet (PR16): ${notification.id}`,
-        );
+        return this.buildMonthlyRevenueContent(notification);
       default: {
         const exhaustiveCheck: never = notification.eventType;
         throw new Error(
@@ -113,6 +113,52 @@ export class MailContentBuilderService {
         '\n',
       ),
     };
+  }
+
+  private buildMonthlyRevenueContent(
+    notification: EmailNotification,
+  ): MailContent {
+    if (!notification.reportPeriod) {
+      throw new Error(
+        `Missing reportPeriod for MONTHLY_REVENUE notification ${notification.id}`,
+      );
+    }
+    const payload =
+      notification.payload as unknown as MonthlyRevenueMailPayload;
+    const lang = notification.locale;
+    const period = this.formatReportPeriodLabel(notification.reportPeriod);
+
+    const subject = this.renderPlain(
+      `mail.${MONTHLY_REVENUE_MAIL_KEY}.subject`,
+      lang,
+      { period },
+    );
+    const greeting = this.plain(
+      `mail.${MONTHLY_REVENUE_MAIL_KEY}.greeting`,
+      lang,
+    );
+    const body = this.renderHtml(
+      `mail.${MONTHLY_REVENUE_MAIL_KEY}.body`,
+      lang,
+      {
+        period,
+        totalRevenueVnd: payload.totalRevenueVnd,
+      },
+    );
+    const footer = this.plain(`mail.${MONTHLY_REVENUE_MAIL_KEY}.footer`, lang);
+
+    return {
+      subject,
+      html: [`<p>${greeting}</p>`, `<p>${body}</p>`, `<p>${footer}</p>`].join(
+        '\n',
+      ),
+    };
+  }
+
+  /** `report_period` là cột `date` dạng `YYYY-MM-01` — hiển thị lại thành `MM/YYYY` cho người đọc. */
+  private formatReportPeriodLabel(reportPeriod: string): string {
+    const [year, month] = reportPeriod.split('-');
+    return `${month}/${year}`;
   }
 
   private plain(key: string, lang: string): string {

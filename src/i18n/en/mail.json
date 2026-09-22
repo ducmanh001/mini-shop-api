@@ -30,5 +30,11 @@
     "greeting": "Hello {recipientName},",
     "body": "We are sorry, but your order {orderId} has been rejected for the following reason: {rejectionReason}",
     "footer": "If you have any questions, please contact our support team."
+  },
+  "monthlyRevenue": {
+    "subject": "Monthly revenue report — {period}",
+    "greeting": "Hello Admin,",
+    "body": "Total revenue from COMPLETED orders in {period} was {totalRevenueVnd} VND.",
+    "footer": "This is an automated monthly report."
   }
 }

@@ -30,5 +30,11 @@
     "greeting": "Chào {recipientName},",
     "body": "Rất tiếc, đơn hàng {orderId} của bạn đã bị từ chối với lý do: {rejectionReason}",
     "footer": "Nếu có thắc mắc, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi."
+  },
+  "monthlyRevenue": {
+    "subject": "Báo cáo doanh thu tháng {period}",
+    "greeting": "Chào Admin,",
+    "body": "Tổng doanh thu từ các đơn hàng COMPLETED trong tháng {period} là {totalRevenueVnd} VND.",
+    "footer": "Đây là báo cáo tự động hàng tháng."
   }
 }
