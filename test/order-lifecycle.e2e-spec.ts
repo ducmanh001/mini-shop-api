@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import ExcelJS from 'exceljs';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { Repository } from 'typeorm';
@@ -350,6 +351,53 @@ describe('Order lifecycle (e2e)', () => {
         .expect(200);
 
       expect((response.body as OrderBody).order.id).toBe(orderId);
+    });
+  });
+
+  describe('GET /admin/orders/export', () => {
+    it('rejects a CUSTOMER token with 403', async () => {
+      const adminToken = await loginAs(SEED_BOB_EMAIL);
+      const { customerToken } = await setupPendingOrder(adminToken);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/admin/orders/export')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(403);
+    });
+
+    it('returns a valid .xlsx workbook containing the filtered order', async () => {
+      const adminToken = await loginAs(SEED_BOB_EMAIL);
+      const { orderId } = await setupPendingOrder(adminToken);
+
+      // supertest/superagent không có parser nhị phân sẵn cho mime type xlsx (đã xác nhận server
+      // trả bytes đúng qua curl thủ công — `file` nhận diện đúng "Microsoft Excel 2007+") — không
+      // ép `.buffer()`/`.parse()` thì `response.body` bị decode nhầm thành text, hỏng zip bên trong.
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/admin/orders/export?status=PENDING')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .buffer()
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+
+      expect(response.headers['content-type']).toBe(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(response.body as Buffer);
+      const sheet = workbook.worksheets[0];
+      // `id` là cột đầu tiên trong ORDER_EXPORT_COLUMNS — round-trip qua buffer thật không giữ lại
+      // `column.key` (chỉ là tiện ích in-memory của exceljs), phải tra theo vị trí cột.
+      const ids: unknown[] = [];
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          ids.push(row.getCell(1).value);
+        }
+      });
+      expect(ids).toContain(orderId);
     });
   });
 

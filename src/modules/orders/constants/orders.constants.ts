@@ -38,3 +38,29 @@ export const ADMIN_ORDER_TRANSITIONS: Readonly<
   [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.REJECTED],
   [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED],
 };
+
+/**
+ * `GET /admin/orders/export` — chặn build workbook không giới hạn cho lượng đơn rất lớn (tránh
+ * nghẽn bộ nhớ); vượt ngưỡng thì chỉ xuất `MAX_ORDER_EXPORT_ROWS` dòng mới nhất, không lỗi.
+ */
+export const MAX_ORDER_EXPORT_ROWS = 5000;
+
+export const ORDER_EXPORT_SHEET_NAME = 'Orders';
+export const ORDER_EXPORT_FILENAME = 'orders-export.xlsx';
+export const XLSX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Cột + thứ tự cố định của file xuất — tách khỏi util build workbook để dễ đối chiếu khi đổi. */
+export const ORDER_EXPORT_COLUMNS: ReadonlyArray<{
+  header: string;
+  key: string;
+  width: number;
+}> = [
+  { header: 'Order ID', key: 'id', width: 38 },
+  { header: 'Status', key: 'status', width: 14 },
+  { header: 'Total (VND)', key: 'totalVnd', width: 16 },
+  { header: 'Recipient', key: 'recipientName', width: 24 },
+  { header: 'Phone', key: 'phone', width: 16 },
+  { header: 'Created At', key: 'createdAt', width: 22 },
+  { header: 'Completed At', key: 'completedAt', width: 22 },
+];
