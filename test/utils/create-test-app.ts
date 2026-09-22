@@ -7,13 +7,24 @@ import { configureApp } from '../../src/common/bootstrap/configure-app';
 
 let activeDataSource: DataSource | undefined;
 
-export async function createTestApp(): Promise<INestApplication<App>> {
+/**
+ * `listen: true` cũng bind một cổng TCP thật (`app.listen(0)`, cổng ngẫu nhiên) thay vì chỉ
+ * `app.init()` — cần cho test dùng `socket.io-client` thật (CHAT-07), vì `supertest` lái thẳng
+ * server chưa listen được nhưng WebSocket handshake thì không. Mặc định `false` để không đổi hành
+ * vi của mọi e2e test REST hiện có.
+ */
+export async function createTestApp(
+  options: { listen?: boolean } = {},
+): Promise<INestApplication<App>> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
   const app = moduleFixture.createNestApplication<INestApplication<App>>();
   configureApp(app);
   await app.init();
+  if (options.listen) {
+    await app.listen(0);
+  }
   activeDataSource = app.get(DataSource);
   return app;
 }

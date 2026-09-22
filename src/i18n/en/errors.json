@@ -33,5 +33,11 @@
   "invalidOrderTransition": "This order cannot be moved to the requested status",
   "suggestionNotFound": "Product suggestion not found",
   "duplicatePendingSuggestion": "You already have a pending suggestion with this name",
-  "invalidSuggestionTransition": "This suggestion is no longer PENDING and cannot be reviewed"
+  "invalidSuggestionTransition": "This suggestion is no longer PENDING and cannot be reviewed",
+  "conversationNotFound": "Conversation not found",
+  "chatConversationClosed": "This conversation is closed and cannot receive new messages",
+  "chatIdempotencyKeyConflict": "This Idempotency-Key was already used with a different message",
+  "invalidChatCursor": "Invalid pagination cursor",
+  "invalidChatConversationTransition": "This conversation cannot be moved to the requested status",
+  "chatAssigneeMustBeActiveAdmin": "assignedAdminId must reference an active admin"
 }
