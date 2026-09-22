@@ -13,6 +13,7 @@ import { EmailNotification } from './entities/email-notification.entity';
 import { MailProcessor } from './processors/mail.processor';
 import { MailContentBuilderService } from './services/mail-content-builder.service';
 import { MailerService } from './services/mailer.service';
+import { MonthlyReportService } from './services/monthly-report.service';
 import { NotificationDispatcherService } from './services/notification-dispatcher.service';
 import { NotificationsService } from './services/notifications.service';
 
@@ -47,6 +48,7 @@ import { NotificationsService } from './services/notifications.service';
     },
     NotificationsService,
     NotificationDispatcherService,
+    MonthlyReportService,
     MailerService,
     MailContentBuilderService,
     MailProcessor,

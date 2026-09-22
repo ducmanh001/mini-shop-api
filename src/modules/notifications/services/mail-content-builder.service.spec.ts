@@ -26,6 +26,11 @@ describe('MailContentBuilderService', () => {
     'mail.orderRejected.greeting': 'Hello {recipientName},',
     'mail.orderRejected.body': 'Rejected: {rejectionReason}',
     'mail.orderRejected.footer': 'Contact support.',
+    'mail.monthlyRevenue.subject': 'Monthly revenue report — {period}',
+    'mail.monthlyRevenue.greeting': 'Hello Admin,',
+    'mail.monthlyRevenue.body':
+      'Total revenue in {period} was {totalRevenueVnd} VND.',
+    'mail.monthlyRevenue.footer': 'This is an automated monthly report.',
   };
 
   beforeEach(() => {
@@ -49,6 +54,7 @@ describe('MailContentBuilderService', () => {
       payload: {},
       order: null,
       secretCiphertext: null,
+      reportPeriod: null,
       ...overrides,
     } as EmailNotification;
   }
@@ -124,11 +130,28 @@ describe('MailContentBuilderService', () => {
     expect(() => service.build(notification)).toThrow(/order relation/);
   });
 
-  it('throws for MONTHLY_REVENUE (not implemented until PR16)', () => {
+  it('builds monthly revenue content from reportPeriod and payload', () => {
     const notification = buildNotification({
       eventType: EmailNotificationEventType.MONTHLY_REVENUE,
+      reportPeriod: '2026-09-01',
+      payload: { templateVersion: 1, totalRevenueVnd: '12500000' },
     });
 
-    expect(() => service.build(notification)).toThrow(/PR16/);
+    const content = service.build(notification);
+
+    expect(content.subject).toBe('Monthly revenue report — 09/2026');
+    expect(content.html).toContain('Hello Admin,');
+    expect(content.html).toContain(
+      'Total revenue in 09/2026 was 12500000 VND.',
+    );
+  });
+
+  it('throws when a MONTHLY_REVENUE notification has no reportPeriod', () => {
+    const notification = buildNotification({
+      eventType: EmailNotificationEventType.MONTHLY_REVENUE,
+      reportPeriod: null,
+    });
+
+    expect(() => service.build(notification)).toThrow(/reportPeriod/);
   });
 });
