@@ -9,6 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { UuidBaseEntity } from '../../../common/entities/uuid-base.entity';
+import { sha256HexCheck } from '../../../common/utils/sha256-hex-check.util';
 import { User } from '../../users/entities/user.entity';
 import { MAX_CHAT_MESSAGE_BODY_LENGTH } from '../constants/chat.constants';
 import { ChatConversation } from './chat-conversation.entity';
@@ -31,6 +32,7 @@ import { ChatConversation } from './chat-conversation.entity';
   'ck_chat_messages_body_length',
   `char_length(body) BETWEEN 1 AND ${MAX_CHAT_MESSAGE_BODY_LENGTH}`,
 )
+@Check('ck_chat_messages_request_hash_format', sha256HexCheck('request_hash'))
 export class ChatMessage extends UuidBaseEntity {
   @Column({ name: 'conversation_id', type: 'uuid' })
   conversationId: string;

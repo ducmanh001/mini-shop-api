@@ -27,6 +27,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [TypeOrmModule],
+  // `JwtModule`/`JwtStrategy` export riêng cho `chat` (PR15): WebSocket handshake cần verify JWT
+  // thô ngoài luồng HTTP/Passport (`ExtractJwt.fromAuthHeaderAsBearerToken()` chỉ đọc Express
+  // Request), nên gateway gọi thẳng `JwtService.verifyAsync()` rồi `JwtStrategy.validate()` để tái
+  // dùng đúng bộ check blacklist/active/tokenVersion, không viết lại ở module khác
+  // (CODING_STANDARD.md mục 10).
+  exports: [TypeOrmModule, JwtModule, JwtStrategy],
 })
 export class AuthModule {}

@@ -17,9 +17,6 @@ export const MAX_ADDRESS_LENGTH = 500;
 /** `CheckoutRequest.customerNote` — tùy chọn, api-contract.md dòng 48. */
 export const MAX_CUSTOMER_NOTE_LENGTH = 500;
 
-/** Header bắt buộc cho `POST /orders` — database.md mục 6. Express/Nest nhận header dạng lowercase. */
-export const IDEMPOTENCY_KEY_HEADER = 'idempotency-key';
-
 /** `orders.rejection_reason` / `order_status_history.reason` — database.md mục 4. */
 export const MAX_ORDER_REJECTION_REASON_LENGTH = 500;
 

@@ -33,5 +33,11 @@
   "invalidOrderTransition": "Không thể chuyển đơn hàng này sang trạng thái yêu cầu",
   "suggestionNotFound": "Không tìm thấy gợi ý sản phẩm",
   "duplicatePendingSuggestion": "Bạn đã có một gợi ý đang chờ duyệt với tên này",
-  "invalidSuggestionTransition": "Gợi ý này không còn ở trạng thái PENDING nên không thể review"
+  "invalidSuggestionTransition": "Gợi ý này không còn ở trạng thái PENDING nên không thể review",
+  "conversationNotFound": "Không tìm thấy conversation",
+  "chatConversationClosed": "Conversation này đã đóng, không thể nhận tin nhắn mới",
+  "chatIdempotencyKeyConflict": "Idempotency-Key này đã được dùng với nội dung tin nhắn khác",
+  "invalidChatCursor": "Cursor phân trang không hợp lệ",
+  "invalidChatConversationTransition": "Không thể chuyển conversation này sang trạng thái yêu cầu",
+  "chatAssigneeMustBeActiveAdmin": "assignedAdminId phải là một admin đang hoạt động"
 }
