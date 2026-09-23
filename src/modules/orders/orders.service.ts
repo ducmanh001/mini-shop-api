@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  StreamableFile,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
@@ -17,10 +18,15 @@ import { EmailNotificationEventType } from '../notifications/enums/email-notific
 import { User } from '../users/entities/user.entity';
 import { AdminListOrdersQueryDto } from './dto/admin-list-orders-query.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ExportOrdersQueryDto } from './dto/export-orders-query.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderResponseDto, OrdersResponseDto } from './dto/order-response.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { ADMIN_ORDER_TRANSITIONS } from './constants/orders.constants';
+import {
+  ADMIN_ORDER_TRANSITIONS,
+  MAX_ORDER_EXPORT_ROWS,
+  XLSX_CONTENT_TYPE,
+} from './constants/orders.constants';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderStatusHistory } from './entities/order-status-history.entity';
 import { Order } from './entities/order.entity';
@@ -30,8 +36,10 @@ import { CheckoutResult } from './interfaces/checkout-result.interface';
 import { LockedCategoryForCheckout } from './interfaces/locked-category-for-checkout.interface';
 import { LockedProductForCheckout } from './interfaces/locked-product-for-checkout.interface';
 import { LockedUserForCheckout } from './interfaces/locked-user-for-checkout.interface';
+import { OrderExportRow } from './interfaces/order-export-row.interface';
 import { OrderHistorySource } from './interfaces/order-history-source.interface';
 import { OrderItemSource } from './interfaces/order-item-source.interface';
+import { buildOrdersWorkbook } from './utils/order-export-workbook.util';
 
 @Injectable()
 export class OrdersService {
@@ -233,6 +241,55 @@ export class OrdersService {
   /** ORDER-06 — admin xem bất kỳ đơn nào, không lọc theo chủ đơn. */
   async getDetailForAdmin(orderId: string): Promise<OrderResponseDto> {
     return this.loadOrderResponse(orderId);
+  }
+
+  /**
+   * `GET /admin/orders/export` — không phân trang, giới hạn `MAX_ORDER_EXPORT_ROWS` dòng mới nhất.
+   * Log ai export bao nhiêu dòng (audit trail cho hành động đọc hàng loạt tên/SĐT khách) — không
+   * log nội dung PII thật, chỉ số lượng và filter đã dùng (mục 9/17.5 CODING_STANDARD.md). Dựng
+   * `StreamableFile` ngay trong service, không phải ở controller — cùng lý do với
+   * `AttachmentsService.getVisibleAttachmentFile` (mục 3 CODING_STANDARD.md áp dụng cho mọi kiểu
+   * response, không riêng JSON).
+   */
+  async exportForAdmin(
+    adminUserId: string,
+    query: ExportOrdersQueryDto,
+  ): Promise<StreamableFile> {
+    const queryBuilder = this.dataSource
+      .getRepository(Order)
+      .createQueryBuilder('order')
+      .select([
+        'order.id',
+        'order.status',
+        'order.totalVnd',
+        'order.recipientName',
+        'order.phone',
+        'order.createdAt',
+        'order.completedAt',
+      ])
+      .orderBy('order.createdAt', 'DESC')
+      .addOrderBy('order.id', 'DESC')
+      .take(MAX_ORDER_EXPORT_ROWS);
+    if (query.status) {
+      queryBuilder.andWhere('order.status = :status', { status: query.status });
+    }
+    const orders = await queryBuilder.getMany();
+
+    const rows: OrderExportRow[] = orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      totalVnd: order.totalVnd,
+      recipientName: order.recipientName,
+      phone: order.phone,
+      createdAt: order.createdAt.toISOString(),
+      completedAt: order.completedAt?.toISOString() ?? '',
+    }));
+    this.logger.log(
+      `Admin ${adminUserId} exported ${rows.length} order(s)` +
+        (query.status ? ` (status=${query.status})` : ''),
+    );
+    const buffer = await buildOrdersWorkbook(rows);
+    return new StreamableFile(buffer, { type: XLSX_CONTENT_TYPE });
   }
 
   /**

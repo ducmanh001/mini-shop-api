@@ -11,6 +11,10 @@ import { EmailNotification } from '../notifications/entities/email-notification.
 import { EmailNotificationEventType } from '../notifications/enums/email-notification-event-type.enum';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
+import {
+  MAX_ORDER_EXPORT_ROWS,
+  XLSX_CONTENT_TYPE,
+} from './constants/orders.constants';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderStatusHistory } from './entities/order-status-history.entity';
@@ -38,6 +42,14 @@ function mockQueryBuilder() {
   builder.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
   builder.execute = jest.fn().mockResolvedValue({ affected: 1 });
   return builder;
+}
+
+async function drain(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks);
 }
 
 function sampleDto(overrides: Partial<CreateOrderDto> = {}): CreateOrderDto {
@@ -692,6 +704,62 @@ describe('OrdersService', () => {
       expect(builder.andWhere).toHaveBeenCalledWith('order.userId = :userId', {
         userId: 'user-2',
       });
+    });
+  });
+
+  describe('exportForAdmin', () => {
+    it('caps the query at MAX_ORDER_EXPORT_ROWS and applies the status filter when given', async () => {
+      const builder = mockQueryBuilder();
+      dataSourceOrderRepository.createQueryBuilder.mockReturnValue(builder);
+
+      await service.exportForAdmin('admin-1', {
+        status: OrderStatus.COMPLETED,
+      });
+
+      expect(builder.take).toHaveBeenCalledWith(MAX_ORDER_EXPORT_ROWS);
+      expect(builder.andWhere).toHaveBeenCalledWith('order.status = :status', {
+        status: OrderStatus.COMPLETED,
+      });
+    });
+
+    it('does not filter by status when none is given', async () => {
+      const builder = mockQueryBuilder();
+      dataSourceOrderRepository.createQueryBuilder.mockReturnValue(builder);
+
+      await service.exportForAdmin('admin-1', {});
+
+      expect(builder.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('maps each order to an export row and returns a non-empty xlsx buffer', async () => {
+      const builder = mockQueryBuilder();
+      builder.getMany.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatus.COMPLETED,
+          totalVnd: '250000',
+          recipientName: 'Nguyen Van A',
+          phone: '0901234567',
+          createdAt: new Date('2026-09-01T00:00:00.000Z'),
+          completedAt: new Date('2026-09-05T00:00:00.000Z'),
+        },
+        {
+          id: 'order-2',
+          status: OrderStatus.PENDING,
+          totalVnd: '100000',
+          recipientName: 'Tran Thi B',
+          phone: '0909999999',
+          createdAt: new Date('2026-09-02T00:00:00.000Z'),
+          completedAt: null,
+        },
+      ]);
+      dataSourceOrderRepository.createQueryBuilder.mockReturnValue(builder);
+
+      const result = await service.exportForAdmin('admin-1', {});
+
+      expect(result.options.type).toBe(XLSX_CONTENT_TYPE);
+      const buffer = await drain(result.getStream());
+      expect(buffer.length).toBeGreaterThan(0);
     });
   });
 

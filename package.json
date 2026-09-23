@@ -51,6 +51,7 @@
     "class-validator": "^0.15.1",
     "commander": "15.0.0",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "ioredis": "^5.11.1",
     "joi": "^18.2.5",
     "nestjs-i18n": "^10.8.5",
