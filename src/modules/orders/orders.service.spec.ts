@@ -11,7 +11,10 @@ import { EmailNotification } from '../notifications/entities/email-notification.
 import { EmailNotificationEventType } from '../notifications/enums/email-notification-event-type.enum';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
-import { MAX_ORDER_EXPORT_ROWS } from './constants/orders.constants';
+import {
+  MAX_ORDER_EXPORT_ROWS,
+  XLSX_CONTENT_TYPE,
+} from './constants/orders.constants';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderStatusHistory } from './entities/order-status-history.entity';
@@ -39,6 +42,14 @@ function mockQueryBuilder() {
   builder.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
   builder.execute = jest.fn().mockResolvedValue({ affected: 1 });
   return builder;
+}
+
+async function drain(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks);
 }
 
 function sampleDto(overrides: Partial<CreateOrderDto> = {}): CreateOrderDto {
@@ -744,9 +755,10 @@ describe('OrdersService', () => {
       ]);
       dataSourceOrderRepository.createQueryBuilder.mockReturnValue(builder);
 
-      const buffer = await service.exportForAdmin('admin-1', {});
+      const result = await service.exportForAdmin('admin-1', {});
 
-      expect(Buffer.isBuffer(buffer)).toBe(true);
+      expect(result.options.type).toBe(XLSX_CONTENT_TYPE);
+      const buffer = await drain(result.getStream());
       expect(buffer.length).toBeGreaterThan(0);
     });
   });

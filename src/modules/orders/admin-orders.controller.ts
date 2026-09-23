@@ -83,11 +83,7 @@ export class AdminOrdersController {
     @Query() query: ExportOrdersQueryDto,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<StreamableFile> {
-    const buffer = await this.ordersService.exportForAdmin(
-      currentUser.id,
-      query,
-    );
-    return new StreamableFile(buffer);
+    return this.ordersService.exportForAdmin(currentUser.id, query);
   }
 
   @Get(':id')

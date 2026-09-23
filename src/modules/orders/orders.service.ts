@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  StreamableFile,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
@@ -24,6 +25,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import {
   ADMIN_ORDER_TRANSITIONS,
   MAX_ORDER_EXPORT_ROWS,
+  XLSX_CONTENT_TYPE,
 } from './constants/orders.constants';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderStatusHistory } from './entities/order-status-history.entity';
@@ -244,12 +246,15 @@ export class OrdersService {
   /**
    * `GET /admin/orders/export` — không phân trang, giới hạn `MAX_ORDER_EXPORT_ROWS` dòng mới nhất.
    * Log ai export bao nhiêu dòng (audit trail cho hành động đọc hàng loạt tên/SĐT khách) — không
-   * log nội dung PII thật, chỉ số lượng và filter đã dùng (mục 9/17.5 CODING_STANDARD.md).
+   * log nội dung PII thật, chỉ số lượng và filter đã dùng (mục 9/17.5 CODING_STANDARD.md). Dựng
+   * `StreamableFile` ngay trong service, không phải ở controller — cùng lý do với
+   * `AttachmentsService.getVisibleAttachmentFile` (mục 3 CODING_STANDARD.md áp dụng cho mọi kiểu
+   * response, không riêng JSON).
    */
   async exportForAdmin(
     adminUserId: string,
     query: ExportOrdersQueryDto,
-  ): Promise<Buffer> {
+  ): Promise<StreamableFile> {
     const queryBuilder = this.dataSource
       .getRepository(Order)
       .createQueryBuilder('order')
@@ -283,7 +288,8 @@ export class OrdersService {
       `Admin ${adminUserId} exported ${rows.length} order(s)` +
         (query.status ? ` (status=${query.status})` : ''),
     );
-    return buildOrdersWorkbook(rows);
+    const buffer = await buildOrdersWorkbook(rows);
+    return new StreamableFile(buffer, { type: XLSX_CONTENT_TYPE });
   }
 
   /**
