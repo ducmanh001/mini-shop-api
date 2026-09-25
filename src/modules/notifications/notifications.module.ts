@@ -46,7 +46,8 @@ import { NotificationsService } from './services/notifications.service';
       // port 587/2525 đều bị drop dù credential đúng. Có MAIL_API_TOKEN thì dùng Mailtrap Sending
       // API (HTTP, cổng 443) thay vì SMTP; không có thì giữ nguyên SMTP cho local/CI (Mailpit).
       useFactory: (config: ConfigService): MailTransport => {
-        const apiToken = config.get<string>('MAIL_API_TOKEN');
+        // .trim() phòng khoảng trắng/newline dính khi copy token qua nhiều bước UI.
+        const apiToken = config.get<string>('MAIL_API_TOKEN')?.trim();
         if (apiToken) {
           return new MailtrapApiMailTransport(apiToken);
         }
