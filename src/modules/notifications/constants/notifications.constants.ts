@@ -13,6 +13,9 @@ export const SEND_MAIL_JOB_NAME = 'send-mail';
 export const MAIL_JOB_BACKOFF_DELAY_MS = 2000;
 export const MAIL_TRANSPORTER_PROVIDER = 'MAIL_TRANSPORTER_PROVIDER';
 
+/** Mailtrap Sending API — dùng khi có `MAIL_API_TOKEN` (xem `MailtrapApiMailTransport`). */
+export const MAILTRAP_SEND_API_URL = 'https://send.api.mailtrap.io/api/send';
+
 /**
  * `'stuck'` (một state khác thêm bởi `Job.getState()`, không thuộc `JobStatus`) cố ý KHÔNG nằm
  * trong set này: nó nghĩa là worker giữ lock đã chết, tức đúng là "orphan" dispatcher cần xử lý.

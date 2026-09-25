@@ -32,6 +32,9 @@ export const envValidationSchema = Joi.object({
   MAIL_USER: Joi.string().optional(),
   MAIL_PASSWORD: Joi.string().optional(),
   MAIL_SECURE: Joi.boolean().default(false),
+  // Có giá trị thì dùng Mailtrap Sending API (HTTP) thay SMTP — cần khi PaaS chặn outbound SMTP
+  // (Railway, xác nhận thật lúc deploy PR19). Không set thì giữ nguyên đường SMTP phía trên.
+  MAIL_API_TOKEN: Joi.string().optional(),
 
   // Deliberately separate key from JWT_SECRET — see notification-secret-cipher.util.ts.
   NOTIFICATION_SECRET_KEY: Joi.string()

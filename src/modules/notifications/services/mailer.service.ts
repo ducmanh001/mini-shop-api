@@ -1,14 +1,14 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { SentMessageInfo, Transporter } from 'nodemailer';
 import { MAIL_TRANSPORTER_PROVIDER } from '../constants/notifications.constants';
 import { MailContent } from '../interfaces/mail-content.interface';
+import type { MailTransport } from '../interfaces/mail-transport.interface';
 
 @Injectable()
 export class MailerService implements OnModuleDestroy {
   constructor(
     @Inject(MAIL_TRANSPORTER_PROVIDER)
-    private readonly transporter: Transporter<SentMessageInfo>,
+    private readonly transporter: MailTransport,
     private readonly config: ConfigService,
   ) {}
 
@@ -22,6 +22,6 @@ export class MailerService implements OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    this.transporter.close();
+    this.transporter.close?.();
   }
 }

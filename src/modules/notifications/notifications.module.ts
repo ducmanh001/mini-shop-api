@@ -10,9 +10,11 @@ import {
   MAIL_TRANSPORTER_PROVIDER,
 } from './constants/notifications.constants';
 import { EmailNotification } from './entities/email-notification.entity';
+import { MailTransport } from './interfaces/mail-transport.interface';
 import { MailProcessor } from './processors/mail.processor';
 import { MailContentBuilderService } from './services/mail-content-builder.service';
 import { MailerService } from './services/mailer.service';
+import { MailtrapApiMailTransport } from './services/mailtrap-api-mail-transport';
 import { MonthlyReportService } from './services/monthly-report.service';
 import { NotificationDispatcherService } from './services/notification-dispatcher.service';
 import { NotificationsService } from './services/notifications.service';
@@ -40,7 +42,14 @@ import { NotificationsService } from './services/notifications.service';
     {
       provide: MAIL_TRANSPORTER_PROVIDER,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      // Nhiều PaaS (Railway...) chặn outbound SMTP hoàn toàn — xác nhận thật lúc deploy PR19, mọi
+      // port 587/2525 đều bị drop dù credential đúng. Có MAIL_API_TOKEN thì dùng Mailtrap Sending
+      // API (HTTP, cổng 443) thay vì SMTP; không có thì giữ nguyên SMTP cho local/CI (Mailpit).
+      useFactory: (config: ConfigService): MailTransport => {
+        const apiToken = config.get<string>('MAIL_API_TOKEN');
+        if (apiToken) {
+          return new MailtrapApiMailTransport(apiToken);
+        }
         const user = config.get<string>('MAIL_USER');
         const password = config.get<string>('MAIL_PASSWORD');
         return nodemailer.createTransport({

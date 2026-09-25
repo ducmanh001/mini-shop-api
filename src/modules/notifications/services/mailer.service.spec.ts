@@ -1,5 +1,4 @@
 import { ConfigService } from '@nestjs/config';
-import type { Transporter } from 'nodemailer';
 import { MailerService } from './mailer.service';
 
 describe('MailerService', () => {
@@ -16,7 +15,7 @@ describe('MailerService', () => {
       getOrThrow: jest.fn().mockReturnValue('no-reply@mini-shop.example.com'),
     };
     service = new MailerService(
-      transporter as unknown as Transporter,
+      transporter,
       config as unknown as ConfigService,
     );
   });
