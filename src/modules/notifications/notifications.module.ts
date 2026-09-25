@@ -39,12 +39,18 @@ import { NotificationsService } from './services/notifications.service';
     {
       provide: MAIL_TRANSPORTER_PROVIDER,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) =>
-        nodemailer.createTransport({
+      useFactory: (config: ConfigService) => {
+        const user = config.get<string>('MAIL_USER');
+        const password = config.get<string>('MAIL_PASSWORD');
+        return nodemailer.createTransport({
           host: config.getOrThrow<string>('MAIL_HOST'),
           port: config.getOrThrow<number>('MAIL_PORT'),
-          secure: false,
-        }),
+          secure: config.getOrThrow<boolean>('MAIL_SECURE'),
+          // Mailpit (local/CI) không cần auth — chỉ set khi SMTP thật có MAIL_USER/MAIL_PASSWORD
+          // (validation ở env.validation.ts đã bắt buộc cả hai cùng có hoặc cùng không).
+          ...(user && password ? { auth: { user, pass: password } } : {}),
+        });
+      },
     },
     NotificationsService,
     NotificationDispatcherService,

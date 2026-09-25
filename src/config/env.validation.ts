@@ -26,6 +26,10 @@ export const envValidationSchema = Joi.object({
   MAIL_HOST: Joi.string().required(),
   MAIL_PORT: Joi.number().port().required(),
   MAIL_FROM: Joi.string().email().required(),
+  // Bỏ trống cho Mailpit (local/CI, không cần auth). SMTP thật (Mailtrap/Brevo/...) bắt buộc cả hai.
+  MAIL_USER: Joi.string().optional(),
+  MAIL_PASSWORD: Joi.string().optional(),
+  MAIL_SECURE: Joi.boolean().default(false),
 
   // Deliberately separate key from JWT_SECRET — see notification-secret-cipher.util.ts.
   NOTIFICATION_SECRET_KEY: Joi.string()
@@ -39,4 +43,4 @@ export const envValidationSchema = Joi.object({
       return value;
     })
     .required(),
-});
+}).and('MAIL_USER', 'MAIL_PASSWORD');
