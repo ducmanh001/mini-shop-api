@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import type { Job, Queue } from 'bull';
 import {
   IN_FLIGHT_JOB_STATES,
@@ -27,7 +27,9 @@ export class NotificationDispatcherService {
     private readonly config: ConfigService,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  // TODO(demo-bypass): "*/5 * * * * *" (mỗi 5s) thay CronExpression.EVERY_MINUTE để demo không phải
+  // đợi tới 1 phút — PHẢI trả lại EVERY_MINUTE sau demo, tick dày thế này không hợp lý cho production.
+  @Cron('*/5 * * * * *')
   async handleCron(): Promise<void> {
     // Tự tắt tick thật trong test env — e2e không liên quan queue vẫn boot AppModule nên vẫn có
     // cron thật chạy nền mỗi phút; test tự gọi dispatchPendingNotifications() để kiểm soát thời gian.
