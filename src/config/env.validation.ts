@@ -19,6 +19,8 @@ export const envValidationSchema = Joi.object({
 
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().required(),
+  // Bỏ trống cho Redis local (docker-compose, không cần auth). Managed Redis (Railway...) bắt buộc.
+  REDIS_PASSWORD: Joi.string().optional(),
 
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.number().integer().positive().default(86400),
