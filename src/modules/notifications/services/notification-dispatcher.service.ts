@@ -1,8 +1,8 @@
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import type { Job, Queue } from 'bull';
+import type { Job, Queue } from 'bullmq';
 import {
   IN_FLIGHT_JOB_STATES,
   MAIL_QUEUE_NAME,

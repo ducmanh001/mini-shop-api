@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import { MAX_EMAIL_NOTIFICATION_ATTEMPTS } from '../constants/notifications.constants';
 import { EmailNotification } from '../entities/email-notification.entity';
 import { EmailNotificationEventType } from '../enums/email-notification-event-type.enum';

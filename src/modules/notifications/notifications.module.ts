@@ -1,4 +1,4 @@
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -24,12 +24,15 @@ import { NotificationsService } from './services/notifications.service';
     TypeOrmModule.forFeature([EmailNotification]),
     AuthModule,
     OrdersModule,
-    // @nestjs/bull (Bull), không phải @nestjs/bullmq — chọn theo yêu cầu mentor, xem
-    // docs/planning/api-contract.md mục "Nguồn kỹ thuật chính thức".
+    // @nestjs/bullmq (không phải @nestjs/bull) — đổi từ Bull cổ điển sang vì bug thật gặp lúc
+    // deploy PR19: job fail rơi vào state "delayed" (chờ backoff) không được Bull cổ điển tự đẩy
+    // lại "wait" một cách đáng tin cậy trên Redis của Railway, kẹt hàng chục phút thay vì vài giây.
+    // Lệch khỏi "chọn @nestjs/bull theo yêu cầu mentor" ở docs/planning/api-contract.md — cần trao
+    // đổi lại với mentor, xem lý do kỹ thuật đầy đủ ở PR notes/commit message.
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        redis: {
+        connection: {
           host: config.getOrThrow<string>('REDIS_HOST'),
           port: config.getOrThrow<number>('REDIS_PORT'),
           password: config.get<string>('REDIS_PASSWORD'),

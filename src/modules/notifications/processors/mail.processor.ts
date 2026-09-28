@@ -1,10 +1,9 @@
-import { Process, Processor } from '@nestjs/bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import type { Job } from 'bull';
+import type { Job } from 'bullmq';
 import {
   MAIL_QUEUE_NAME,
   MAX_EMAIL_NOTIFICATION_ATTEMPTS,
-  SEND_MAIL_JOB_NAME,
 } from '../constants/notifications.constants';
 import { EmailNotificationStatus } from '../enums/email-notification-status.enum';
 import { MailJobData } from '../interfaces/mail-job.interface';
@@ -13,23 +12,24 @@ import { MailerService } from '../services/mailer.service';
 import { NotificationsService } from '../services/notifications.service';
 
 /**
- * Mỗi job Bull chỉ thử đúng 1 lần (không đặt attempts/backoff — xem
+ * Mỗi job BullMQ chỉ thử đúng 1 lần (không đặt attempts/backoff — xem
  * `NotificationDispatcherService.enqueueOrFail()`); retry thật nằm ở tick 5s của dispatcher, dựa
- * trên DB `attempts` (không phải bộ đếm nội bộ của Bull) — nguồn sự thật duy nhất quyết định còn
+ * trên DB `attempts` (không phải bộ đếm nội bộ của queue) — nguồn sự thật duy nhất quyết định còn
  * ngân sách gửi hay đã hết, vì job có thể mất khi Redis restart.
  */
 @Processor(MAIL_QUEUE_NAME)
-export class MailProcessor {
+export class MailProcessor extends WorkerHost {
   private readonly logger = new Logger(MailProcessor.name);
 
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly mailContentBuilder: MailContentBuilderService,
     private readonly mailerService: MailerService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process(SEND_MAIL_JOB_NAME)
-  async handleSendMail(job: Job<MailJobData>): Promise<void> {
+  async process(job: Job<MailJobData>): Promise<void> {
     const { notificationId } = job.data;
     const notification =
       await this.notificationsService.findByIdForSending(notificationId);
@@ -56,7 +56,7 @@ export class MailProcessor {
     }
 
     // Mail đã gửi thành công tại đây — không được để lỗi từ bước này rơi vào
-    // handleSendFailure()/rethrow, vì Bull sẽ retry và gọi lại sendMail(), gửi trùng mail.
+    // handleSendFailure()/rethrow, vì queue sẽ retry và gọi lại sendMail(), gửi trùng mail.
     try {
       await this.notificationsService.markSent(notificationId);
       this.logger.log(

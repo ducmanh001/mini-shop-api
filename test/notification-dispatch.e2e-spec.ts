@@ -88,7 +88,7 @@ describe('Notification dispatch (e2e)', () => {
     }
   }
 
-  it('sends an ORDER_PLACED email through real Redis/Bull/SMTP and marks it SENT', async () => {
+  it('sends an ORDER_PLACED email through real Redis/BullMQ/SMTP and marks it SENT', async () => {
     const order = await createOrderFixture();
     const notification = notificationsRepository.create({
       orderId: order.id,

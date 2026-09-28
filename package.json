@@ -33,7 +33,7 @@
     "seed": "ts-node src/database/seeds/seed.ts"
   },
   "dependencies": {
-    "@nestjs/bull": "11.0.5",
+    "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.2.3",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.3",
@@ -46,7 +46,7 @@
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.2.3",
     "bcrypt": "^6.0.0",
-    "bull": "^4.16.5",
+    "bullmq": "^6.3.9",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "commander": "15.0.0",
@@ -97,9 +97,6 @@
   "overrides": {
     "@nestjs/platform-express": {
       "multer": "2.3.0"
-    },
-    "bull": {
-      "uuid": "11.1.1"
     }
   },
   "jest": {
