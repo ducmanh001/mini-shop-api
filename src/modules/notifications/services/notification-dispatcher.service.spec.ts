@@ -54,7 +54,11 @@ describe('NotificationDispatcherService', () => {
     expect(mailQueue.add).toHaveBeenCalledWith(
       'send-mail',
       { notificationId: 'notif-1' },
-      expect.objectContaining({ jobId: 'notif-1', attempts: 3 }),
+      {
+        jobId: 'notif-1',
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
     );
   });
 

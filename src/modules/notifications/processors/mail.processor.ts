@@ -13,8 +13,10 @@ import { MailerService } from '../services/mailer.service';
 import { NotificationsService } from '../services/notifications.service';
 
 /**
- * Bull tự retry qua `attempts`/`backoff` của job; DB `attempts` (không phải bộ đếm nội bộ của Bull)
- * mới là nguồn sự thật quyết định còn ngân sách gửi hay đã hết, vì job có thể mất khi Redis restart.
+ * Mỗi job Bull chỉ thử đúng 1 lần (không đặt attempts/backoff — xem
+ * `NotificationDispatcherService.enqueueOrFail()`); retry thật nằm ở tick 5s của dispatcher, dựa
+ * trên DB `attempts` (không phải bộ đếm nội bộ của Bull) — nguồn sự thật duy nhất quyết định còn
+ * ngân sách gửi hay đã hết, vì job có thể mất khi Redis restart.
  */
 @Processor(MAIL_QUEUE_NAME)
 export class MailProcessor {

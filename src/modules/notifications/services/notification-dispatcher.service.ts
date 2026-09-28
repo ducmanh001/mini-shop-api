@@ -7,7 +7,6 @@ import {
   IN_FLIGHT_JOB_STATES,
   MAIL_QUEUE_NAME,
   MAX_EMAIL_NOTIFICATION_ATTEMPTS,
-  MAIL_JOB_BACKOFF_DELAY_MS,
   NOTIFICATION_DISPATCH_BATCH_SIZE,
   SEND_MAIL_JOB_NAME,
 } from '../constants/notifications.constants';
@@ -97,13 +96,16 @@ export class NotificationDispatcherService {
       );
       return;
     }
+    // Không đặt attempts/backoff ở Bull — bug thật gặp lúc deploy PR19: state "delayed" của Bull
+    // không tự được đẩy lại "wait" một cách đáng tin cậy trên Redis của Railway, job kẹt hàng chục
+    // phút thay vì vài giây. Mỗi job Bull giờ chỉ thử đúng 1 lần; fail thì rơi thẳng vào "failed"
+    // (terminal), tick dispatcher kế tiếp (mỗi 5s) tự tạo job mới — retry/backoff nằm hẳn ở tầng
+    // dispatcher dựa trên `attempts` của DB, không phụ thuộc cơ chế delayed-job của Bull nữa.
     await this.mailQueue.add(
       SEND_MAIL_JOB_NAME,
       { notificationId: notification.id },
       {
         jobId: notification.id,
-        attempts: MAX_EMAIL_NOTIFICATION_ATTEMPTS,
-        backoff: { type: 'exponential', delay: MAIL_JOB_BACKOFF_DELAY_MS },
         removeOnComplete: true,
         removeOnFail: true,
       },
