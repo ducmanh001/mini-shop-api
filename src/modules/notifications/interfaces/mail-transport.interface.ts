@@ -7,8 +7,8 @@ export interface MailTransportSendParams {
 
 /**
  * Interface chung cho 2 cách gửi mail thật: SMTP (`nodemailer`, dùng local/CI với Mailpit) và HTTP
- * API (Mailtrap Sending API, dùng cloud — Railway chặn outbound SMTP, xác nhận thật lúc deploy
- * PR19: mọi port 587/2525 đều bị drop ở tầng mạng dù credential đúng).
+ * API (Mailtrap Email Testing/Sandbox API, dùng cloud — Railway chặn outbound SMTP, xác nhận thật
+ * lúc deploy PR19: mọi port 587/2525 đều bị drop ở tầng mạng dù credential đúng).
  */
 export interface MailTransport {
   /** Trả `Promise<unknown>` (không `Promise<void>`) để nodemailer's `Transporter.sendMail()`

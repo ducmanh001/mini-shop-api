@@ -13,8 +13,15 @@ export const SEND_MAIL_JOB_NAME = 'send-mail';
 export const MAIL_JOB_BACKOFF_DELAY_MS = 2000;
 export const MAIL_TRANSPORTER_PROVIDER = 'MAIL_TRANSPORTER_PROVIDER';
 
-/** Mailtrap Sending API — dùng khi có `MAIL_API_TOKEN` (xem `MailtrapApiMailTransport`). */
-export const MAILTRAP_SEND_API_URL = 'https://send.api.mailtrap.io/api/send';
+/**
+ * Mailtrap Email Testing (Sandbox) API — dùng khi có `MAIL_API_TOKEN` (xem `MailtrapApiMailTransport`).
+ * Phải nối thêm `/{inbox_id}` (`MAILTRAP_INBOX_ID`). Khác với Mailtrap Sending API
+ * (`send.api.mailtrap.io`, yêu cầu verified sending domain) — tài khoản sandbox/free gọi nhầm
+ * endpoint Sending sẽ bị 401 dù token đủ quyền (bug thật gặp ở PR19, xem
+ * docs/testing/pr19-manual-test-guide.md).
+ */
+export const MAILTRAP_SANDBOX_SEND_API_BASE_URL =
+  'https://sandbox.api.mailtrap.io/api/send';
 
 /**
  * `'stuck'` (một state khác thêm bởi `Job.getState()`, không thuộc `JobStatus`) cố ý KHÔNG nằm
