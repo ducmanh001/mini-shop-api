@@ -24,6 +24,14 @@ export const MAILTRAP_SANDBOX_SEND_API_BASE_URL =
   'https://sandbox.api.mailtrap.io/api/send';
 
 /**
+ * `fetch()` gọi Mailtrap không có timeout mặc định — 1 request treo bất thường (mạng chập chờn)
+ * sẽ giữ job ở trạng thái "active" vô thời hạn, chặn đứng cả hàng đợi vì `MailProcessor` xử lý
+ * tuần tự (concurrency 1). Bug thật gặp lúc deploy PR19: 1 job treo khiến mọi notification tạo
+ * sau đó không bao giờ được xử lý dù dispatcher vẫn tick đều.
+ */
+export const MAILTRAP_API_TIMEOUT_MS = 15_000;
+
+/**
  * `'stuck'` (một state khác thêm bởi `Job.getState()`, không thuộc `JobStatus`) cố ý KHÔNG nằm
  * trong set này: nó nghĩa là worker giữ lock đã chết, tức đúng là "orphan" dispatcher cần xử lý.
  */
