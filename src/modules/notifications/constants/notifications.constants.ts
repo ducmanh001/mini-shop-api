@@ -1,4 +1,4 @@
-import type { JobStatus } from 'bull';
+import type { JobState } from 'bullmq';
 import { EmailNotificationEventType } from '../enums/email-notification-event-type.enum';
 
 export const MAX_EMAIL_NOTIFICATION_ATTEMPTS = 3;
@@ -31,13 +31,16 @@ export const MAILTRAP_SANDBOX_SEND_API_BASE_URL =
 export const MAILTRAP_API_TIMEOUT_MS = 15_000;
 
 /**
- * `'stuck'` (một state khác thêm bởi `Job.getState()`, không thuộc `JobStatus`) cố ý KHÔNG nằm
- * trong set này: nó nghĩa là worker giữ lock đã chết, tức đúng là "orphan" dispatcher cần xử lý.
+ * `'completed'`/`'failed'` (terminal) và `'unknown'` (job đã bị dọn/không xác định được state) cố
+ * ý KHÔNG nằm trong set này — coi là "orphan" để dispatcher tạo job mới, thiên về hướng tự phục
+ * hồi thay vì bỏ mặc treo (bug thật gặp ở PR19: job kẹt "delayed" không được tự đẩy lại "wait").
  */
-export const IN_FLIGHT_JOB_STATES: ReadonlySet<JobStatus | 'stuck'> = new Set([
+export const IN_FLIGHT_JOB_STATES: ReadonlySet<JobState | 'unknown'> = new Set([
   'active',
   'waiting',
   'delayed',
+  'waiting-children',
+  'prioritized',
 ]);
 
 export const AUTH_TOKEN_LINK_PATH: Partial<

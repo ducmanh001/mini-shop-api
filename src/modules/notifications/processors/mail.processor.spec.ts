@@ -1,4 +1,4 @@
-import { Job } from 'bull';
+import { Job } from 'bullmq';
 import { EmailNotification } from '../entities/email-notification.entity';
 import { EmailNotificationEventType } from '../enums/email-notification-event-type.enum';
 import { EmailNotificationStatus } from '../enums/email-notification-status.enum';
@@ -61,7 +61,7 @@ describe('MailProcessor', () => {
   it('does nothing when the notification no longer exists', async () => {
     notificationsService.findByIdForSending.mockResolvedValue(null);
 
-    await processor.handleSendMail(buildJob());
+    await processor.process(buildJob());
 
     expect(notificationsService.reserveAttempt).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe('MailProcessor', () => {
       buildNotification({ status: EmailNotificationStatus.SENT }),
     );
 
-    await processor.handleSendMail(buildJob());
+    await processor.process(buildJob());
 
     expect(notificationsService.reserveAttempt).not.toHaveBeenCalled();
   });
@@ -82,7 +82,7 @@ describe('MailProcessor', () => {
     );
     notificationsService.reserveAttempt.mockResolvedValue(true);
 
-    await processor.handleSendMail(buildJob());
+    await processor.process(buildJob());
 
     expect(mailerService.sendMail).toHaveBeenCalledWith(
       'customer@example.test',
@@ -100,7 +100,7 @@ describe('MailProcessor', () => {
       buildNotification({ attempts: 3 }),
     );
 
-    await processor.handleSendMail(buildJob());
+    await processor.process(buildJob());
 
     expect(notificationsService.markFailed).toHaveBeenCalledWith(
       'notif-1',
@@ -118,12 +118,12 @@ describe('MailProcessor', () => {
       buildNotification({ status: EmailNotificationStatus.SENT }),
     );
 
-    await processor.handleSendMail(buildJob());
+    await processor.process(buildJob());
 
     expect(notificationsService.markFailed).not.toHaveBeenCalled();
   });
 
-  it('rethrows to let Bull retry when send fails and budget remains', async () => {
+  it('rethrows so the job fails when send fails and budget remains', async () => {
     notificationsService.findByIdForSending.mockResolvedValue(
       buildNotification({}),
     );
@@ -133,9 +133,7 @@ describe('MailProcessor', () => {
       buildNotification({ attempts: 1 }),
     );
 
-    await expect(processor.handleSendMail(buildJob())).rejects.toThrow(
-      'SMTP timeout',
-    );
+    await expect(processor.process(buildJob())).rejects.toThrow('SMTP timeout');
     expect(notificationsService.markFailed).not.toHaveBeenCalled();
   });
 
@@ -146,7 +144,7 @@ describe('MailProcessor', () => {
     notificationsService.reserveAttempt.mockResolvedValue(true);
     notificationsService.markSent.mockRejectedValue(new Error('DB timeout'));
 
-    await expect(processor.handleSendMail(buildJob())).resolves.toBeUndefined();
+    await expect(processor.process(buildJob())).resolves.toBeUndefined();
 
     expect(mailerService.sendMail).toHaveBeenCalledTimes(1);
     expect(notificationsService.markFailed).not.toHaveBeenCalled();
@@ -162,7 +160,7 @@ describe('MailProcessor', () => {
       buildNotification({ attempts: 3 }),
     );
 
-    await expect(processor.handleSendMail(buildJob())).resolves.toBeUndefined();
+    await expect(processor.process(buildJob())).resolves.toBeUndefined();
     expect(notificationsService.markFailed).toHaveBeenCalledWith(
       'notif-1',
       'SMTP timeout',
