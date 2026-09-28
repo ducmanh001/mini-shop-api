@@ -1,4 +1,4 @@
-import { MAILTRAP_SEND_API_URL } from '../constants/notifications.constants';
+import { MAILTRAP_SANDBOX_SEND_API_BASE_URL } from '../constants/notifications.constants';
 import { MailtrapApiMailTransport } from './mailtrap-api-mail-transport';
 
 describe('MailtrapApiMailTransport', () => {
@@ -15,16 +15,14 @@ describe('MailtrapApiMailTransport', () => {
     global.fetch = fetchMock as typeof fetch;
   });
 
-  // TODO(demo-bypass): 2 test dưới đây tắt tạm vì DEMO_BYPASS_SKIP_REAL_SEND=true trả về sớm,
-  // không gọi fetch — bật lại (.skip -> bỏ .skip) khi gỡ bypass trong mailtrap-api-mail-transport.ts.
-  it.skip('POSTs the mail as JSON with a Bearer token', async () => {
+  it('POSTs the mail as JSON with a Bearer token to the sandbox inbox URL', async () => {
     fetchMock.mockResolvedValue({ ok: true });
-    const transport = new MailtrapApiMailTransport('api-token');
+    const transport = new MailtrapApiMailTransport('api-token', 'inbox-id');
 
     await transport.sendMail(params);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      MAILTRAP_SEND_API_URL,
+      `${MAILTRAP_SANDBOX_SEND_API_BASE_URL}/inbox-id`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -41,21 +39,14 @@ describe('MailtrapApiMailTransport', () => {
     );
   });
 
-  it.skip('throws when Mailtrap responds with a non-2xx status', async () => {
+  it('throws when Mailtrap responds with a non-2xx status', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 401,
       text: () => Promise.resolve('Unauthorized'),
     });
-    const transport = new MailtrapApiMailTransport('bad-token');
+    const transport = new MailtrapApiMailTransport('bad-token', 'inbox-id');
 
     await expect(transport.sendMail(params)).rejects.toThrow('401');
-  });
-
-  it('DEMO BYPASS: resolves without calling fetch (remove this test with the bypass)', async () => {
-    const transport = new MailtrapApiMailTransport('any-token');
-
-    await expect(transport.sendMail(params)).resolves.toBeUndefined();
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
