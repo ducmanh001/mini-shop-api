@@ -13,6 +13,7 @@ import { UuidBaseEntity } from '../../../common/entities/uuid-base.entity';
 import { Product } from '../../products/entities/product.entity';
 import { User } from '../../users/entities/user.entity';
 import {
+  MAX_REVIEW_COMMENT_LENGTH,
   MAX_REVIEW_RATING,
   MIN_REVIEW_RATING,
 } from '../constants/reviews.constants';
@@ -46,7 +47,7 @@ export class Review extends UuidBaseEntity {
   @Column({ type: 'smallint' })
   rating: number;
 
-  @Column({ type: 'varchar', length: 2000 })
+  @Column({ type: 'varchar', length: MAX_REVIEW_COMMENT_LENGTH })
   comment: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
