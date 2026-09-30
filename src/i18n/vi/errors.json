@@ -1,5 +1,6 @@
 {
   "internal": "Đã xảy ra lỗi hệ thống",
+  "tooManyRequests": "Bạn thao tác quá nhiều lần, vui lòng thử lại sau",
   "emailAlreadyRegistered": "Email này đã được đăng ký",
   "usernameAlreadyTaken": "Username này đã được sử dụng",
   "usernameOrEmailAlreadyRegistered": "Email hoặc username này đã được đăng ký",

@@ -1,5 +1,6 @@
 {
   "internal": "Internal server error",
+  "tooManyRequests": "Too many requests, please try again later",
   "emailAlreadyRegistered": "This email is already registered",
   "usernameAlreadyTaken": "This username is already taken",
   "usernameOrEmailAlreadyRegistered": "This email or username is already registered",

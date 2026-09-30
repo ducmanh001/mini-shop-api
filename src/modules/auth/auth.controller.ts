@@ -16,6 +16,7 @@ import type { AuthenticatedUser } from '../../common/auth/authenticated-user.int
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { RateLimited } from '../../rate-limit/rate-limit.decorator';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -30,6 +31,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @RateLimited()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new customer account' })
   @ApiResponse({
@@ -49,6 +51,7 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @RateLimited()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Activate an account with its email token' })
   @ApiResponse({
@@ -64,6 +67,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @RateLimited()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({
@@ -75,6 +79,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @RateLimited()
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Request a password reset email' })
   @ApiResponse({
@@ -92,6 +97,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @RateLimited()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Reset the password using an emailed token' })
   @ApiResponse({

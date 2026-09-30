@@ -20,8 +20,23 @@ export const envValidationSchema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().required(),
 
+  // Số proxy tin cậy đứng trước app (Railway/nginx = 1). Để 0 khi chạy thẳng: `req.ip` là IP socket
+  // thật và client không giả được `X-Forwarded-For`. Đặt sai (0 sau proxy) làm mọi client dùng chung
+  // một IP nên rate limit theo IP thành giới hạn toàn hệ thống.
+  TRUST_PROXY_HOPS: Joi.number().integer().min(0).default(0),
+
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.number().integer().positive().default(86400),
+
+  // Rate limit endpoint auth công khai (register/verify-email/login/forgot-password/reset-password):
+  // theo IP và theo email trong body. Mặc định là giá trị an toàn cho production.
+  THROTTLE_AUTH_IP_LIMIT: Joi.number().integer().positive().default(20),
+  THROTTLE_AUTH_IP_TTL_SECONDS: Joi.number().integer().positive().default(60),
+  THROTTLE_AUTH_ACCOUNT_LIMIT: Joi.number().integer().positive().default(10),
+  THROTTLE_AUTH_ACCOUNT_TTL_SECONDS: Joi.number()
+    .integer()
+    .positive()
+    .default(900),
 
   MAIL_HOST: Joi.string().required(),
   MAIL_PORT: Joi.number().port().required(),
