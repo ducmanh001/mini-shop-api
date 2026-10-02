@@ -27,6 +27,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UsersModule } from './modules/users/users.module';
 import { NotificationSecretModule } from './notification-secret/notification-secret.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -62,6 +63,7 @@ import { RedisModule } from './redis/redis.module';
     }),
     ScheduleModule.forRoot(),
     RedisModule,
+    RateLimitModule,
     NotificationSecretModule,
     UsersModule,
     AuthModule,

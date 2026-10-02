@@ -22,6 +22,8 @@ import { RedisService } from './redis.service';
     },
     RedisService,
   ],
-  exports: [RedisService],
+  // `REDIS_CLIENT` export riêng cho `RateLimitModule`: `@nest-lab/throttler-storage-redis` cần đúng
+  // instance ioredis này để dùng chung một connection, không mở thêm connection thứ hai.
+  exports: [RedisService, REDIS_CLIENT],
 })
 export class RedisModule {}
